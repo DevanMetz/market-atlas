@@ -1,14 +1,22 @@
-import type { ChartRow, History, Period, PricePoint } from './types'
+import type {
+  ChartRow,
+  DateRange,
+  History,
+  Period,
+  PricePoint,
+  TimeWindow,
+} from './types'
 
 export const mean = (values: number[]) =>
   values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0
-export const stdev = (values: number[]) =>
-  values.length > 1
-    ? Math.sqrt(
-        values.reduce((sum, x) => sum + (x - mean(values)) ** 2, 0) /
-          (values.length - 1),
-      )
-    : 0
+export const stdev = (values: number[]) => {
+  if (values.length < 2) return 0
+  const average = mean(values)
+  return Math.sqrt(
+    values.reduce((sum, x) => sum + (x - average) ** 2, 0) /
+      (values.length - 1),
+  )
+}
 export const pct = (value: number | null | undefined, digits = 2) =>
   value == null || !Number.isFinite(value)
     ? '—'
@@ -38,6 +46,27 @@ export const shortDate = (date: string) =>
 export const dailyReturns = (values: number[]) =>
   values.slice(1).map((v, i) => v / values[i] - 1)
 
+export function validDate(date: unknown): date is string {
+  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date))
+    return false
+  const parsed = new Date(`${date}T12:00:00Z`)
+  return (
+    Number.isFinite(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === date
+  )
+}
+
+export function parseDateRange(start: unknown, end: unknown): DateRange | null {
+  return validDate(start) && validDate(end) && start < end
+    ? { start, end }
+    : null
+}
+
+export const windowLabel = (period: TimeWindow) =>
+  typeof period === 'string' ? period : 'Selected dates'
+export const windowKey = (period: TimeWindow) =>
+  typeof period === 'string' ? period : `${period.start}_${period.end}`
+
 export function cutoff(period: Period, end: string): string {
   const date = new Date(`${end.slice(0, 10)}T12:00:00Z`)
   if (period === 'YTD') return `${date.getUTCFullYear() - 1}-12-31`
@@ -60,12 +89,22 @@ export function cutoff(period: Period, end: string): string {
 
 export function inPeriod(
   points: PricePoint[],
-  period: Period,
+  period: TimeWindow,
   end?: string,
 ): PricePoint[] {
   if (!points.length) return []
-  const until = end ?? points.at(-1)!.date
-  const from = cutoff(period, until)
+  if (typeof period !== 'string' && !parseDateRange(period.start, period.end))
+    return []
+  const availableEnd = [
+    end ?? points.at(-1)!.date,
+    points.at(-1)!.date,
+  ].sort()[0]
+  const until =
+    typeof period === 'string'
+      ? availableEnd
+      : [period.end, availableEnd].sort()[0]
+  const from = typeof period === 'string' ? cutoff(period, until) : period.start
+  if (from >= until) return []
   let baseline = -1
   points.forEach((p, i) => {
     if (p.date <= from) baseline = i
@@ -77,7 +116,8 @@ export function inPeriod(
   // a short IPO history off as a full multi-year return.
   if (
     result.length < 2 ||
-    new Date(result[0].date).getTime() - new Date(from).getTime() > 7 * 86400000
+    Math.abs(new Date(result[0].date).getTime() - new Date(from).getTime()) >
+      7 * 86400000
   )
     return []
   return result
@@ -85,7 +125,7 @@ export function inPeriod(
 
 export function performance(
   history: History | undefined,
-  period: Period,
+  period: TimeWindow,
   end?: string,
 ): number | null {
   const points = history ? inPeriod(history.points, period, end) : []
@@ -103,7 +143,7 @@ export function dailyChange(history?: History): number | null {
 
 export function align(
   histories: History[],
-  period: Period,
+  period: TimeWindow,
 ): { dates: string[]; values: Record<string, number[]> } {
   if (!histories.length || histories.some((h) => !h.points.length))
     return { dates: [], values: {} }
@@ -128,11 +168,12 @@ export function align(
 
 export function chartData(
   histories: History[],
-  period: Period,
+  period: TimeWindow,
   mode: 'return' | 'relative' | 'drawdown' | 'growth' = 'return',
   benchmark = 'SPY',
 ): ChartRow[] {
   const { dates, values } = align(histories, period)
+  if (mode === 'relative' && !values[benchmark]) return []
   const peaks: Record<string, number> = {}
   return dates.map((date, i) => {
     const row: ChartRow = { date }
@@ -201,13 +242,16 @@ export function rsi(prices: number[], window = 14): number | null {
 }
 export function metrics(
   history?: History,
-  period: Period = '1Y',
+  period: TimeWindow = '1Y',
   benchmark?: History,
 ) {
   const points = history ? inPeriod(history.points, period) : []
   const prices = points.map((p) => p.adjusted),
     returns = dailyReturns(prices)
-  const all = history?.points.map((p) => p.adjusted) ?? []
+  const available = (history?.points ?? []).filter(
+    (p) => typeof period === 'string' || p.date <= period.end,
+  )
+  const all = available.map((p) => p.adjusted)
   let beta: number | null = null,
     corr: number | null = null,
     excess: number | null = null
@@ -238,39 +282,10 @@ export function metrics(
     start: points[0]?.date,
     end: points.at(-1)?.date,
     observations: points.length,
+    lastAdjusted: all.at(-1) ?? null,
+    technicalDate: available.at(-1)?.date,
+    volume: available.at(-1)?.volume ?? null,
   }
-}
-
-export function portfolioSeries(
-  histories: History[],
-  weights: Record<string, number>,
-  period: Period,
-  benchmark?: History,
-): ChartRow[] {
-  const members = histories.filter((h) => (weights[h.symbol] ?? 0) > 0)
-  if (!members.length) return []
-  const all =
-    benchmark && !members.some((h) => h.symbol === benchmark.symbol)
-      ? [...members, benchmark]
-      : members
-  const { dates, values } = align(all, period)
-  return dates.map((date, i) => ({
-    date,
-    Portfolio: members.reduce(
-      (sum, h) =>
-        sum +
-        10000 *
-          (weights[h.symbol] / 100) *
-          (values[h.symbol][i] / values[h.symbol][0]),
-      0,
-    ),
-    ...(benchmark && values[benchmark.symbol]
-      ? {
-          [benchmark.symbol]:
-            (10000 * values[benchmark.symbol][i]) / values[benchmark.symbol][0],
-        }
-      : {}),
-  }))
 }
 
 export function downloadCSV(
@@ -280,7 +295,7 @@ export function downloadCSV(
 ) {
   const safe = (v: unknown) => {
     let s = v == null ? '' : String(v)
-    if (typeof v === 'string' && /^[=+@\t\r]/.test(s)) s = "'" + s
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = "'" + s
     return '"' + s.replaceAll('"', '""') + '"'
   }
   const blob = new Blob(

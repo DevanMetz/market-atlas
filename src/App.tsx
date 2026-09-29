@@ -15,6 +15,7 @@ import {
   Layers3,
   Menu,
   RefreshCw,
+  TrendingUp,
   Search,
   Share2,
   Star,
@@ -27,20 +28,25 @@ import {
   downloadCSV,
   metrics,
   num,
+  parseDateRange,
   shortDate,
+  windowKey,
+  windowLabel,
 } from './lib/analytics'
 import { useMarket } from './lib/useMarket'
-import type { Period, View } from './lib/types'
+import type { DateRange, Period, View } from './lib/types'
 import type { MarketContext } from './lib/context'
 import {
   BenchmarkPicker,
   Change,
+  DateRangePicker,
   PeriodPicker,
   SymbolSearch,
 } from './components/UI'
 import { Sparkline } from './components/Charts'
 import { Comparison, Overview, SectorExplorer } from './views/Overview'
 import { StocksView } from './views/Stocks'
+import { TrendsView } from './views/Trends'
 import {
   Correlations,
   Methodology,
@@ -53,9 +59,10 @@ const NAV = [
   { id: 'sectors', name: 'Sector explorer', icon: Layers3, tag: '02' },
   { id: 'compare', name: 'Compare assets', icon: GitCompareArrows, tag: '03' },
   { id: 'stocks', name: 'Stock screener', icon: Search, tag: '04' },
-  { id: 'correlations', name: 'Correlations', icon: Activity, tag: '05' },
-  { id: 'portfolio', name: 'Portfolio lab', icon: Wallet, tag: '06' },
-  { id: 'watchlist', name: 'Watchlist', icon: Star, tag: '07' },
+  { id: 'trends', name: 'Trend lab', icon: TrendingUp, tag: '05' },
+  { id: 'correlations', name: 'Correlations', icon: Activity, tag: '06' },
+  { id: 'portfolio', name: 'Portfolio lab', icon: Wallet, tag: '07' },
+  { id: 'watchlist', name: 'Watchlist', icon: Star, tag: '08' },
 ] as const
 const META: Record<View, { title: string; subtitle: string }> = {
   overview: {
@@ -75,6 +82,11 @@ const META: Record<View, { title: string; subtitle: string }> = {
     title: 'Stock screener',
     subtitle:
       'Find your next research question. Explore performance, momentum and risk.',
+  },
+  trends: {
+    title: 'Trend lab',
+    subtitle:
+      'Explore changing returns, risk and relationships, one window at a time.',
   },
   correlations: {
     title: 'Correlations',
@@ -135,8 +147,17 @@ export default function App() {
       ? initial.get('benchmark')!
       : 'SPY',
   )
+  const [dateRange, setDateRange] = useState<DateRange | null>(() =>
+    parseDateRange(initial.get('start'), initial.get('end')),
+  )
+  const analysisWindow = dateRange ?? period
+  const analysisLabel = windowLabel(analysisWindow)
   const [selected, setSelected] = useState(initialSymbols),
-    [focus, setFocus] = useState(() => /^[A-Z0-9^][A-Z0-9.^=\-]{0,19}$/.test(initial.get('stock') ?? '') ? initial.get('stock')! : 'AAPL'),
+    [focus, setFocus] = useState(() =>
+      /^[A-Z0-9^][A-Z0-9.^=\-]{0,19}$/.test(initial.get('stock') ?? '')
+        ? initial.get('stock')!
+        : 'AAPL',
+    ),
     [watchlist, setWatchlist] = useState<string[]>(savedWatchlist)
   const [mobile, setMobile] = useState(false),
     [toast, setToast] = useState('')
@@ -155,8 +176,12 @@ export default function App() {
       symbols: selected.join(','),
     })
     if (view === 'stocks') query.set('stock', focus)
+    if (dateRange) {
+      query.set('start', dateRange.start)
+      query.set('end', dateRange.end)
+    }
     window.history.replaceState({}, '', `${window.location.pathname}?${query}`)
-  }, [view, period, benchmark, selected, focus])
+  }, [view, period, benchmark, selected, focus, dateRange])
   useEffect(() => {
     try {
       localStorage.setItem('market-atlas-watchlist', JSON.stringify(watchlist))
@@ -200,7 +225,7 @@ export default function App() {
           : [...prev, symbol],
     )
   const addSymbol = (symbol: string) => {
-    if (view === 'compare') {
+    if (view === 'compare' || view === 'trends') {
       if (!selected.includes(symbol)) {
         if (selected.length >= 12) {
           notify('A comparison can include up to 12 assets plus its benchmark.')
@@ -220,6 +245,8 @@ export default function App() {
   const ctx: MarketContext = {
     ...market,
     period,
+    window: analysisWindow,
+    windowLabel: analysisLabel,
     benchmark,
     selected,
     setSelected,
@@ -260,7 +287,7 @@ export default function App() {
             ? [...new Set([...selected, benchmark])]
             : SECTORS.map((s) => s.symbol)
     downloadCSV(
-      `market-atlas-${view}-${period}.csv`,
+      `market-atlas-${view}-${windowKey(analysisWindow)}.csv`,
       [
         'Symbol',
         'Name',
@@ -268,7 +295,9 @@ export default function App() {
         'Latest quote',
         'Last daily observation',
         '1D adjusted return (%)',
-        `${period} return (%)`,
+        `${analysisLabel} return (%)`,
+        'Window start',
+        'Window end',
         `Excess vs ${benchmark} (pp)`,
         'Annualized volatility (%)',
         'Max drawdown (%)',
@@ -280,7 +309,7 @@ export default function App() {
       ],
       symbols.map((s) => {
         const h = market.data[s],
-          m = metrics(h, period, market.data[benchmark])
+          m = metrics(h, analysisWindow, market.data[benchmark])
         return [
           s,
           h?.name ?? asset(s).name,
@@ -289,6 +318,8 @@ export default function App() {
           h?.points.at(-1)?.date,
           m.day,
           m.change,
+          m.start,
+          m.end,
           m.excess,
           m.volatility,
           m.drawdown,
@@ -392,7 +423,7 @@ export default function App() {
           </a>
           <div className="sidebar-status">
             <span>PUBLIC RESEARCH WORKSPACE</span>
-            <small>Market Atlas · v1.0</small>
+            <small>Market Atlas · v1.1</small>
           </div>
         </div>
       </aside>
@@ -451,7 +482,9 @@ export default function App() {
                 <Share2 size={14} />
                 <span>Share view</span>
               </button>
-              {!['methodology', 'portfolio', 'correlations'].includes(view) && (
+              {!['methodology', 'portfolio', 'correlations', 'trends'].includes(
+                view,
+              ) && (
                 <button
                   className="button"
                   aria-label="Export CSV"
@@ -504,7 +537,7 @@ export default function App() {
                   compact
                   onSelect={addSymbol}
                   placeholder={
-                    view === 'compare'
+                    view === 'compare' || view === 'trends'
                       ? 'Add stock or ETF to comparison…'
                       : view === 'watchlist'
                         ? 'Add stock or ETF to watchlist…'
@@ -512,7 +545,18 @@ export default function App() {
                   }
                 />
                 <div className="toolbar-controls">
-                  <PeriodPicker value={period} onChange={setPeriod} />
+                  <PeriodPicker
+                    value={dateRange ? undefined : period}
+                    onChange={(next) => {
+                      setPeriod(next)
+                      setDateRange(null)
+                    }}
+                  />
+                  <DateRangePicker
+                    value={dateRange}
+                    onChange={setDateRange}
+                    latest={latest ?? new Date().toISOString().slice(0, 10)}
+                  />
                   <BenchmarkPicker value={benchmark} onChange={setBenchmark} />
                   <button
                     className={`icon-button refresh ${market.loading.length ? 'spinning' : ''}`}
@@ -575,6 +619,7 @@ export default function App() {
           {view === 'overview' && <Overview ctx={ctx} />}
           {view === 'sectors' && <SectorExplorer ctx={ctx} />}
           {view === 'compare' && <Comparison ctx={ctx} />}
+          {view === 'trends' && <TrendsView ctx={ctx} />}
           {view === 'stocks' && (
             <StocksView ctx={ctx} focus={focus} onFocus={openStock} />
           )}

@@ -203,3 +203,113 @@ test('main controls have accessible names and semantic structure', async ({
     ),
   ).toEqual([])
 })
+
+test('custom dates survive reload and presets clear the custom window', async ({
+  page,
+}) => {
+  await page.goto('/?view=compare&symbols=XLK&period=YTD')
+  await page.getByText('Custom dates', { exact: true }).click()
+  await page.getByLabel('Custom start date').fill('2025-12-31')
+  await page.getByLabel('Custom end date').fill('2026-03-31')
+  await page.getByRole('button', { name: 'Apply dates', exact: true }).click()
+  await expect(page).toHaveURL(/start=2025-12-31&end=2026-03-31/)
+  await expect(page.locator('.chart-caption').first()).toContainText(
+    'Mar 31, 2026',
+  )
+  await page.reload()
+  await expect(page.locator('.date-range-picker summary')).toContainText(
+    'Dec 31, 2025',
+  )
+  await expect(page.locator('.chart-caption').first()).toContainText(
+    'Mar 31, 2026',
+  )
+  await page.getByRole('button', { name: '3M', exact: true }).click()
+  await expect(page).not.toHaveURL(/start=/)
+  await expect(page.locator('.date-range-picker summary')).toHaveText(
+    'Custom dates',
+  )
+})
+
+test('trend lab changes rolling measures and exports monthly observations', async ({
+  page,
+}) => {
+  await page.goto('/?view=trends&symbols=XLK,XLF&period=1Y&benchmark=SPY')
+  await expect(page.locator('.chart-wrap .recharts-line')).toHaveCount(3)
+  await page.getByLabel('Rolling measure').selectOption('correlation')
+  await page.getByLabel('Rolling window').selectOption('20')
+  await expect(page.locator('.chart-wrap .recharts-line')).toHaveCount(2)
+  await expect(page.locator('.rolling-latest')).not.toContainText('—')
+  await expect(page.locator('.month-calendar tbody tr')).toHaveCount(6)
+  await expect(page.locator('.seasonality-month')).toHaveCount(12)
+  await page.getByLabel('Calendar asset').selectOption('SPY')
+  await page.getByRole('button', { name: 'vs SPY', exact: true }).click()
+  await expect(page.locator('.month-calendar')).toContainText('0.0pp')
+  const downloadPromise = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export calendar', exact: true })
+    .click()
+  expect((await downloadPromise).suggestedFilename()).toBe(
+    'market-atlas-monthly-SPY.csv',
+  )
+  const result = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .disableRules(['color-contrast'])
+    .analyze()
+  expect(
+    result.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    ),
+  ).toEqual([])
+})
+
+test('portfolio settings persist and new symbols join with zero allocation', async ({
+  page,
+}) => {
+  await page.goto('/?view=portfolio')
+  await expect(page.locator('.portfolio-value>strong')).not.toHaveText('—')
+  await page.getByLabel('Starting value in USD').fill('25000')
+  await page.getByLabel('Rebalancing frequency').selectOption('monthly')
+  await expect(page.locator('.portfolio-value')).toContainText('$25,000.00')
+  await expect(page.locator('.chart-caption')).toContainText('rebalances')
+  const search = page.getByLabel('Add a portfolio stock or ETF…')
+  await search.fill('AAPL')
+  await search.press('Enter')
+  await expect(page.getByLabel('AAPL allocation percent')).toHaveValue('0')
+  await page.getByLabel('SPY allocation percent').fill('40')
+  await page.getByLabel('AAPL allocation percent').fill('20')
+  await expect(page.locator('.portfolio-value>strong')).not.toHaveText('—')
+  await page.reload()
+  await expect(page.getByLabel('Starting value in USD')).toHaveValue('25000')
+  await expect(page.getByLabel('Rebalancing frequency')).toHaveValue('monthly')
+  await expect(page.getByLabel('AAPL allocation percent')).toHaveValue('20')
+  const result = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .disableRules(['color-contrast'])
+    .analyze()
+  expect(
+    result.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    ),
+  ).toEqual([])
+})
+
+test('new research controls fit the mobile viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/?view=trends&symbols=XLK&period=1Y')
+  await expect(page.locator('.seasonality-month')).toHaveCount(12)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390)
+  await page.getByText('Custom dates', { exact: true }).click()
+  await expect(
+    page.getByRole('button', { name: 'Apply dates', exact: true }),
+  ).toBeVisible()
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390)
+  await page.goto('/?view=portfolio')
+  await expect(page.getByLabel('Rebalancing frequency')).toBeVisible()
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390)
+})

@@ -10,9 +10,11 @@ A public, responsive market-research workspace built with React, TypeScript, Rec
 - **Sector explorer:** absolute and benchmark-relative heatmaps, 1-week through 5-year return tables, and a 1-month/3-month relative momentum scatter plot.
 - **Compare assets:** up to 12 stocks, sectors or global assets plus a benchmark; return, excess return, drawdown and hypothetical $10,000 growth; shareable view URLs.
 - **Stock screener:** 54 selected U.S. large-cap stocks, sector/technical filters, sortable metrics, individual research and provider-backed symbol search beyond the catalog.
+- **Trend lab:** 20/60/120/252-observation rolling returns, volatility, correlation and beta; monthly absolute/excess return calendars; descriptive seasonal averages; CSV exports.
 - **Correlations:** pairwise daily-return matrices for sectors, global assets and your comparison; click a pair to investigate.
-- **Portfolio lab:** USD-only, fixed initial weight, buy-and-hold simulations, volatility, maximum drawdown, return contributions and daily-return distributions.
+- **Portfolio lab:** USD-only simulations with custom starting capital, buy and hold or monthly/quarterly/yearly rebalancing, final allocations, additive profit contributions, volatility, maximum drawdown and daily-return distributions. Search for assets beyond the catalog; export simulations and contributions.
 - **Watchlist:** device-local saved tickers, plus CSV exports and documented calculations.
+- **Research windows:** preset horizons or custom start/end dates, preserved in shareable URLs. Historical technical indicators stop at the selected end date; current quote cards remain current.
 
 ## Develop
 
@@ -55,7 +57,9 @@ An included GitHub Actions workflow runs build and calculation/browser checks on
 - Returns use adjusted closing prices where the whole series supports them. If adjustment is incomplete, the whole series uses closes and displays a warning; adjusted and unadjusted observations are not silently mixed within one series.
 - Period starts use the preceding trading observation. Chart series intersect dates; pairwise risk measures intersect pair dates. Short histories are unavailable for longer requested periods. No missing prices are fabricated or forward-filled.
 - Risk: sample daily-return standard deviation × √252; within-window peak-to-trough maximum drawdown; paired covariance/variance beta; Pearson correlation. RSI uses Wilder's 14-session smoothing. Moving averages and 252-session ranges use adjusted closes.
-- ETF proxies differ from index levels. Cross-currency comparisons show local-currency returns, with no FX conversion. Portfolios require USD assets and exclude taxes, commissions, rebalancing and cash flows.
+- ETF proxies differ from index levels. Cross-currency comparisons show local-currency returns, with no FX conversion. Unknown currency and missing volume remain unknown, not silently replaced with USD or zero.
+- Portfolio rebalancing occurs after the first shared closing observation of each new calendar interval, with no use of future prices. Contributions accumulate each asset's investment profit, excluding allocation transfers, and divide by starting capital. Portfolios require known USD assets and exclude taxes, commissions, cash flows and execution costs; fractional positions are allowed.
+- Rolling measures use only trailing shared observations, including warm-up history before the displayed dates. Monthly returns require the preceding month's close; current/truncated months are marked partial. Seasonal averages exclude partial months and describe a small historical sample, not a forecast. Calendars use the full available five-year history.
 - The screener catalog is curated, not all listed stocks. Sector mappings need periodic review. No fundamentals, earnings, analyst estimates, news, options, brokerage actions or intraday streaming are claimed.
 
 ### Data rights

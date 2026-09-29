@@ -57,6 +57,8 @@ export function PerformanceChart({
   mode = 'return',
   height = 330,
   loading = false,
+  baseline,
+  description,
 }: {
   rows: ChartRow[]
   symbols: string[]
@@ -64,6 +66,8 @@ export function PerformanceChart({
   mode?: string
   height?: number
   loading?: boolean
+  baseline?: number
+  description?: string
 }) {
   if (rows.length < 2)
     return (
@@ -87,12 +91,13 @@ export function PerformanceChart({
       </div>
     )
   const money = mode === 'growth'
+  const numeric = mode === 'correlation' || mode === 'beta'
   return (
     <div
       role="region"
       className="chart-wrap"
       style={{ height }}
-      aria-label={`${money ? 'Growth of $10,000' : mode === 'drawdown' ? 'Drawdown' : mode === 'relative' ? 'Performance relative to benchmark' : 'Cumulative performance'} chart from ${rows[0].date} through ${rows.at(-1)!.date}`}
+      aria-label={`${description ?? (money ? 'Hypothetical investment growth' : mode === 'drawdown' ? 'Drawdown' : mode === 'relative' ? 'Performance relative to benchmark' : 'Cumulative performance')} chart from ${rows[0].date} through ${rows.at(-1)!.date}`}
     >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <LineChart
@@ -125,12 +130,14 @@ export function PerformanceChart({
             tickFormatter={(v) =>
               money
                 ? `$${num(v / 1000, 1)}k`
-                : `${v > 0 ? '+' : ''}${num(v, 0)}${mode === 'relative' ? 'pp' : '%'}`
+                : numeric
+                  ? num(v, 2)
+                  : `${v > 0 ? '+' : ''}${num(v, 0)}${mode === 'relative' ? 'pp' : '%'}`
             }
             tick={{ fill: '#82908a', fontSize: 12 }}
             axisLine={false}
             tickLine={false}
-            domain={['auto', 'auto']}
+            domain={mode === 'correlation' ? [-1, 1] : ['auto', 'auto']}
           />
           <Tooltip
             contentStyle={{
@@ -144,16 +151,18 @@ export function PerformanceChart({
             formatter={(v, name) => [
               money
                 ? `$${num(Number(v))}`
-                : mode === 'relative'
-                  ? `${Number(v) > 0 ? '+' : ''}${num(Number(v))} pp`
-                  : pct(Number(v)),
+                : numeric
+                  ? num(Number(v), 3)
+                  : mode === 'relative'
+                    ? `${Number(v) > 0 ? '+' : ''}${num(Number(v))} pp`
+                    : pct(Number(v)),
               String(name) === 'Portfolio'
                 ? 'Portfolio'
                 : `${name} · ${asset(String(name)).name}`,
             ]}
           />
           <ReferenceLine
-            y={money ? 10000 : 0}
+            y={baseline ?? (money ? 10000 : mode === 'beta' ? 1 : 0)}
             stroke="#526158"
             strokeDasharray="3 4"
           />

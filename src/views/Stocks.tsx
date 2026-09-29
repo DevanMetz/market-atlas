@@ -35,7 +35,7 @@ export function AssetTable({
     [page, setPage] = useState(0)
   const rows = assets.map((a) => ({
     ...a,
-    ...metrics(ctx.data[a.symbol], ctx.period, ctx.data[ctx.benchmark]),
+    ...metrics(ctx.data[a.symbol], ctx.window, ctx.data[ctx.benchmark]),
     price: ctx.data[a.symbol]?.price,
   }))
   const ordered = rows.sort((a, b) => {
@@ -84,7 +84,7 @@ export function AssetTable({
               <th>{heading('Asset', 'symbol')}</th>
               <th className="right">{heading('Price', 'price')}</th>
               <th className="right">{heading('1D', 'day')}</th>
-              <th className="right">{heading(ctx.period, 'change')}</th>
+              <th className="right">{heading(ctx.windowLabel, 'change')}</th>
               <th className="right">vs {ctx.benchmark}</th>
               <th className="right">{heading('Volatility', 'volatility')}</th>
               <th className="right">{heading('RSI 14', 'rsi')}</th>
@@ -199,15 +199,15 @@ export function StockDetail({
   ctx: MarketContext
 }) {
   const history = ctx.data[symbol],
-    m = metrics(history, ctx.period, ctx.data[ctx.benchmark])
+    m = metrics(history, ctx.window, ctx.data[ctx.benchmark])
   const series = [...new Set([symbol, ctx.benchmark])],
     rows = chartData(
       series.map((s) => ctx.data[s]).filter((h): h is History => !!h),
-      ctx.period,
+      ctx.window,
     )
-  const last = history?.points.at(-1)?.adjusted
+  const last = m.lastAdjusted
   const position =
-    m.low !== null && m.high !== null && last !== undefined && m.high > m.low
+    m.low !== null && m.high !== null && last !== null && m.high > m.low
       ? Math.max(0, Math.min(100, ((last - m.low) / (m.high - m.low)) * 100))
       : null
   return (
@@ -280,6 +280,11 @@ export function StockDetail({
             </div>
             <div className="technicals">
               <span className="eyebrow">TECHNICAL SNAPSHOT</span>
+              {m.technicalDate && (
+                <span className="technical-date small muted">
+                  As of {shortDate(m.technicalDate)}
+                </span>
+              )}
               <dl>
                 <div>
                   <dt>RSI (14 sessions)</dt>
@@ -317,9 +322,7 @@ export function StockDetail({
                 </div>
                 <div>
                   <dt>Last session volume</dt>
-                  <dd>
-                    {history ? num(history.points.at(-1)?.volume, 0) : '—'}
-                  </dd>
+                  <dd>{num(m.volume, 0)}</dd>
                 </div>
               </dl>
               <span className="small muted">
@@ -339,7 +342,7 @@ export function StockDetail({
           </div>
           <div className="detail-stats">
             <Stat
-              label={`${ctx.period} return`}
+              label={`${ctx.windowLabel} return`}
               value={<Change value={m.change} />}
             />
             <Stat
@@ -395,15 +398,13 @@ export function StocksView({
   )
   const filtered = universe.filter((a) => {
     const history = ctx.data[a.symbol],
-      m = metrics(history, ctx.period)
+      m = metrics(history, ctx.window)
     return (
       (sector === 'All sectors' || a.sector === sector) &&
       `${a.symbol} ${a.name}`.toLowerCase().includes(filter.toLowerCase()) &&
       (!above ||
-        (!!m.sma200 &&
-          !!history &&
-          history.points.at(-1)!.adjusted > m.sma200)) &&
-      (!positive || (performance(history, ctx.period) ?? -1) > 0)
+        (!!m.sma200 && m.lastAdjusted !== null && m.lastAdjusted > m.sma200)) &&
+      (!positive || (performance(history, ctx.window) ?? -1) > 0)
     )
   })
   return (
@@ -439,7 +440,7 @@ export function StocksView({
             Above 200-day avg.
           </Toggle>
           <Toggle checked={positive} onChange={() => setPositive(!positive)}>
-            Positive {ctx.period}
+            Positive {ctx.windowLabel}
           </Toggle>
         </div>
         <AssetTable ctx={ctx} assets={filtered} onOpen={onFocus} />

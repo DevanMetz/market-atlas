@@ -34,7 +34,7 @@ export function SectorHeatmap({
       {SECTORS.map((s) => {
         const m = metrics(
             ctx.data[s.symbol],
-            ctx.period,
+            ctx.window,
             ctx.data[ctx.benchmark],
           ),
           value = relative ? m.excess : m.change
@@ -75,17 +75,17 @@ export function Overview({ ctx }: { ctx: MarketContext }) {
   const histories = series
     .map((s) => ctx.data[s])
     .filter((h): h is History => !!h)
-  const rows = chartData(histories, ctx.period, mode, ctx.benchmark)
+  const rows = chartData(histories, ctx.window, mode, ctx.benchmark)
   const ranking = SECTORS.map((s) => ({
     ...s,
-    ...metrics(ctx.data[s.symbol], ctx.period, ctx.data[ctx.benchmark]),
+    ...metrics(ctx.data[s.symbol], ctx.window, ctx.data[ctx.benchmark]),
   }))
     .filter((s) => s.change !== null)
     .sort((a, b) => b.change! - a.change!)
   const winner = ranking[0],
     laggard = ranking.at(-1),
     beat = ranking.filter((s) => s.excess !== null && s.excess > 0).length
-  const bm = metrics(ctx.data[ctx.benchmark], ctx.period)
+  const bm = metrics(ctx.data[ctx.benchmark], ctx.window)
   return (
     <>
       <div className="insight-strip">
@@ -94,8 +94,8 @@ export function Overview({ ctx }: { ctx: MarketContext }) {
         </span>
         {winner ? (
           <p>
-            <strong>{winner.name}</strong> leads the sectors over {ctx.period}{' '}
-            with <Change value={winner.change} />
+            <strong>{winner.name}</strong> leads the sectors over{' '}
+            {ctx.windowLabel} with <Change value={winner.change} />
             <span className="insight-divider">/</span>
             <strong>
               {beat} of {ranking.length}
@@ -181,7 +181,7 @@ export function Overview({ ctx }: { ctx: MarketContext }) {
               <>
                 <Change value={winner.change} />{' '}
                 <span>
-                  over {ctx.period} · {winner.symbol}
+                  over {ctx.windowLabel} · {winner.symbol}
                 </span>
               </>
             ) : undefined
@@ -195,7 +195,7 @@ export function Overview({ ctx }: { ctx: MarketContext }) {
               <>
                 <Change value={laggard.change} />{' '}
                 <span>
-                  over {ctx.period} · {laggard.symbol}
+                  over {ctx.windowLabel} · {laggard.symbol}
                 </span>
               </>
             ) : undefined
@@ -204,19 +204,19 @@ export function Overview({ ctx }: { ctx: MarketContext }) {
         <Stat
           label={`${ctx.benchmark} annualized volatility`}
           value={bm.volatility == null ? '—' : `${num(bm.volatility, 1)}%`}
-          detail={`Daily return variability · ${ctx.period}`}
+          detail={`Daily return variability · ${ctx.windowLabel}`}
         />
         <Stat
           label={`${ctx.benchmark} maximum drawdown`}
           value={<Change value={bm.drawdown} />}
-          detail={`Largest peak-to-trough decline · ${ctx.period}`}
+          detail={`Largest peak-to-trough decline · ${ctx.windowLabel}`}
         />
       </div>
       <Panel
         title="Sector leaderboard"
         action={
           <span className="muted small">
-            {ctx.period} performance · ETF proxies
+            {ctx.windowLabel} performance · ETF proxies
           </span>
         }
       >
@@ -316,8 +316,8 @@ export function SectorExplorer({ ctx }: { ctx: MarketContext }) {
   const rows = SECTORS.map((s) => ({
     ...s,
     value: relative
-      ? metrics(ctx.data[s.symbol], ctx.period, ctx.data[ctx.benchmark]).excess
-      : performance(ctx.data[s.symbol], ctx.period),
+      ? metrics(ctx.data[s.symbol], ctx.window, ctx.data[ctx.benchmark]).excess
+      : performance(ctx.data[s.symbol], ctx.window),
   })).sort((a, b) => (b.value ?? -Infinity) - (a.value ?? -Infinity))
   const max = Math.max(1, ...rows.map((r) => Math.abs(r.value ?? 0)))
   return (
@@ -362,7 +362,7 @@ export function SectorExplorer({ ctx }: { ctx: MarketContext }) {
           </p>
         </Panel>
         <Panel
-          title={`${ctx.period} sector ranking`}
+          title={`${ctx.windowLabel} sector ranking`}
           eyebrow={
             relative ? 'EXCESS RETURN · PERCENTAGE POINTS' : 'ABSOLUTE RETURN'
           }
@@ -454,7 +454,7 @@ export function Comparison({ ctx }: { ctx: MarketContext }) {
   const histories = series
     .map((s) => ctx.data[s])
     .filter((h): h is History => !!h)
-  const rows = chartData(histories, ctx.period, mode, ctx.benchmark)
+  const rows = chartData(histories, ctx.window, mode, ctx.benchmark)
   return (
     <>
       <Panel
@@ -565,7 +565,7 @@ export function Comparison({ ctx }: { ctx: MarketContext }) {
               {series.map((s) => {
                 const m = metrics(
                   ctx.data[s],
-                  ctx.period,
+                  ctx.window,
                   ctx.data[ctx.benchmark],
                 )
                 return (

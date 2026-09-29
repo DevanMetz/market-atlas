@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Check, ChevronDown, Plus, Search, X } from 'lucide-react'
+import { CalendarDays, Check, ChevronDown, Plus, Search, X } from 'lucide-react'
 import { asset, BENCHMARKS, CATALOG, PERIODS } from '../lib/catalog'
-import { pct } from '../lib/analytics'
-import type { Asset, Period } from '../lib/types'
+import { cutoff, parseDateRange, pct, shortDate } from '../lib/analytics'
+import type { Asset, DateRange, Period } from '../lib/types'
 
 export function Change({
   value,
@@ -54,7 +54,7 @@ export function PeriodPicker({
   value,
   onChange,
 }: {
-  value: Period
+  value?: Period
   onChange: (value: Period) => void
 }) {
   return (
@@ -72,6 +72,106 @@ export function PeriodPicker({
     </div>
   )
 }
+export function DateRangePicker({
+  value,
+  onChange,
+  latest,
+}: {
+  value: DateRange | null
+  onChange: (range: DateRange | null) => void
+  latest: string
+}) {
+  const [start, setStart] = useState(value?.start ?? cutoff('1Y', latest))
+  const [end, setEnd] = useState(value?.end ?? latest)
+  const [error, setError] = useState('')
+  const ref = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    if (value) {
+      setStart(value.start)
+      setEnd(value.end)
+    }
+  }, [value])
+  return (
+    <details ref={ref} className={`date-range-picker ${value ? 'active' : ''}`}>
+      <summary>
+        <CalendarDays size={14} />
+        {value
+          ? `${shortDate(value.start)} – ${shortDate(value.end)}`
+          : 'Custom dates'}
+      </summary>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault()
+          const next = parseDateRange(start, end)
+          if (!next) {
+            setError('Choose an end date after the start date.')
+            return
+          }
+          if (start < cutoff('5Y', latest) || end > latest) {
+            setError('Choose dates within the available five-year history.')
+            return
+          }
+          setError('')
+          onChange(next)
+          ref.current?.removeAttribute('open')
+        }}
+      >
+        <strong>Choose a research window</strong>
+        <label>
+          Start date
+          <input
+            aria-label="Custom start date"
+            type="date"
+            value={start}
+            min={cutoff('5Y', latest)}
+            max={end}
+            required
+            onChange={(e) => setStart(e.target.value)}
+          />
+        </label>
+        <label>
+          End date
+          <input
+            aria-label="Custom end date"
+            type="date"
+            value={end}
+            min={start}
+            max={latest}
+            required
+            onChange={(e) => setEnd(e.target.value)}
+          />
+        </label>
+        <p>
+          The chart uses the last available close on or before your start date.
+          Actual shared dates are shown below each chart.
+        </p>
+        {error && (
+          <span role="alert" className="negative">
+            {error}
+          </span>
+        )}
+        <div>
+          <button className="button primary" type="submit">
+            Apply dates
+          </button>
+          {value && (
+            <button
+              className="button"
+              type="button"
+              onClick={() => {
+                onChange(null)
+                ref.current?.removeAttribute('open')
+              }}
+            >
+              Clear dates
+            </button>
+          )}
+        </div>
+      </form>
+    </details>
+  )
+}
+
 export function BenchmarkPicker({
   value,
   onChange,
@@ -213,22 +313,37 @@ export function SymbolSearch({
         aria-label={placeholder}
         aria-expanded={focused && query.length > 0}
         aria-controls={focused && query.length > 0 ? resultId : undefined}
-        aria-activedescendant={focused && activeIndex >= 0 && activeIndex < options.length ? `${resultId}-${activeIndex}` : undefined}
+        aria-activedescendant={
+          focused && activeIndex >= 0 && activeIndex < options.length
+            ? `${resultId}-${activeIndex}`
+            : undefined
+        }
         placeholder={placeholder}
         value={query}
         onFocus={() => setFocused(true)}
-        onChange={(e) => { setQuery(e.target.value); setActiveIndex(-1) }}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          setActiveIndex(-1)
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') setFocused(false)
-          if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && options.length) {
+          if (
+            (e.key === 'ArrowDown' || e.key === 'ArrowUp') &&
+            options.length
+          ) {
             e.preventDefault()
             setFocused(true)
-            setActiveIndex(previous => e.key === 'ArrowDown' ? (previous + 1) % options.length : (previous - 1 + options.length) % options.length)
+            setActiveIndex((previous) =>
+              e.key === 'ArrowDown'
+                ? (previous + 1) % options.length
+                : (previous - 1 + options.length) % options.length,
+            )
           }
           if (e.key === 'Enter' && query.trim()) {
             e.preventDefault()
             const exact = query.trim().toUpperCase()
-            if (activeIndex >= 0 && options[activeIndex]) select(options[activeIndex].symbol)
+            if (activeIndex >= 0 && options[activeIndex])
+              select(options[activeIndex].symbol)
             else if (options.some((a) => a.symbol === exact)) select(exact)
             else if (options.length) select(options[0].symbol)
             else if (/^[A-Z0-9^][A-Z0-9.^=\-]{0,19}$/i.test(exact))
@@ -272,7 +387,11 @@ export function SymbolSearch({
           {busy && <div className="search-note">Searching exchanges…</div>}
           {/^[A-Z0-9^][A-Z0-9.^=\-]{0,19}$/i.test(query.trim()) &&
             !options.some((a) => a.symbol === query.trim().toUpperCase()) && (
-              <button role="option" aria-selected="false" onClick={() => select(query.trim().toUpperCase())}>
+              <button
+                role="option"
+                aria-selected="false"
+                onClick={() => select(query.trim().toUpperCase())}
+              >
                 <Plus size={17} />
                 <span>
                   Look up <strong>{query.trim().toUpperCase()}</strong>

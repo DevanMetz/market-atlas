@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
-import { asset, CATALOG, GLOBAL, SECTORS } from '../lib/catalog'
+import { Trash2 } from 'lucide-react'
+import { asset, GLOBAL, SECTORS } from '../lib/catalog'
 import {
   downloadCSV,
   align,
@@ -10,14 +10,15 @@ import {
   metrics,
   num,
   pct,
-  portfolioSeries,
+  windowKey,
   shortDate,
   stdev,
   usd,
 } from '../lib/analytics'
 import type { MarketContext } from '../lib/context'
-import type { History } from '../lib/types'
-import { Change, Empty, Panel, Stat } from '../components/UI'
+import type { History, Rebalance } from '../lib/types'
+import { simulatePortfolio, validWeights } from '../lib/portfolio'
+import { Change, Empty, Panel, Stat, SymbolSearch } from '../components/UI'
 import { DistributionChart, PerformanceChart } from '../components/Charts'
 import { AssetTable } from './Stocks'
 
@@ -41,7 +42,7 @@ export function Correlations({ ctx }: { ctx: MarketContext }) {
   const cells = symbols.map((a) =>
     symbols.map((b) => {
       if (!ctx.data[a] || !ctx.data[b]) return null
-      const { values } = align([ctx.data[a], ctx.data[b]], ctx.period)
+      const { values } = align([ctx.data[a], ctx.data[b]], ctx.window)
       return correlation(
         dailyReturns(values[a] ?? []),
         dailyReturns(values[b] ?? []),
@@ -84,7 +85,7 @@ export function Correlations({ ctx }: { ctx: MarketContext }) {
         <div className="correlation-summary">
           <p>
             Correlation of daily adjusted returns over{' '}
-            <strong>{ctx.period}</strong>. Click any pair to compare its
+            <strong>{ctx.windowLabel}</strong>. Click any pair to compare its
             performance.
           </p>
           <span className="small muted">
@@ -144,7 +145,18 @@ export function Correlations({ ctx }: { ctx: MarketContext }) {
           <span>0 · Little linear relationship</span>
           <i />
           <span>+1 · Move together</span>
-          <button className="button" onClick={() => downloadCSV(`market-atlas-correlation-${ctx.period}.csv`, ['Asset', ...symbols], symbols.map((symbol, i) => [symbol, ...cells[i]]))}>Export matrix</button>
+          <button
+            className="button"
+            onClick={() =>
+              downloadCSV(
+                `market-atlas-correlation-${ctx.windowLabel}.csv`,
+                ['Asset', ...symbols],
+                symbols.map((symbol, i) => [symbol, ...cells[i]]),
+              )
+            }
+          >
+            Export matrix
+          </button>
         </div>
         <p className="panel-note">
           Pearson correlation, calculated on common trading dates for each pair;
@@ -164,7 +176,7 @@ export function Correlations({ ctx }: { ctx: MarketContext }) {
                 <p>
                   {asset(lowest.a).name} and {asset(lowest.b).name} have the
                   lowest measured daily-return correlation in this set over{' '}
-                  {ctx.period}.
+                  {ctx.windowLabel}.
                 </p>
                 <button
                   className="button"
@@ -216,24 +228,38 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
       const stored = JSON.parse(
         localStorage.getItem('market-atlas-portfolio') ?? 'null',
       )
-      if (
-        stored &&
-        typeof stored === 'object' &&
-        !Array.isArray(stored) &&
-        Object.keys(stored).length <= 12 &&
-        Object.entries(stored).every(
-          ([s, w]) =>
-            /^[A-Z0-9^][A-Z0-9.^=\-]{0,19}$/.test(s) &&
-            typeof w === 'number' &&
-            w >= 0 &&
-            w <= 100,
-        )
-      )
-        return stored
+      if (validWeights(stored)) return stored
     } catch {}
     return { SPY: 60, AGG: 40 }
   })
-  const [newSymbol, setNewSymbol] = useState('XLK')
+  const [settings, setSettings] = useState<{
+    capital: number
+    rebalance: Rebalance
+  }>(() => {
+    try {
+      const saved = JSON.parse(
+        localStorage.getItem('market-atlas-portfolio-settings') ?? 'null',
+      )
+      if (
+        saved &&
+        Number.isFinite(saved.capital) &&
+        saved.capital > 0 &&
+        saved.capital <= 1e9 &&
+        ['none', 'monthly', 'quarterly', 'yearly'].includes(saved.rebalance)
+      )
+        return saved
+    } catch {}
+    return { capital: 10000, rebalance: 'none' }
+  })
+  const [addMessage, setAddMessage] = useState('')
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'market-atlas-portfolio-settings',
+        JSON.stringify(settings),
+      )
+    } catch {}
+  }, [settings])
   useEffect(() => {
     void ctx.load(Object.keys(weights))
   }, [weights, ctx.load])
@@ -255,17 +281,27 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
   const histories = active
     .map((s) => ctx.data[s])
     .filter((h): h is History => !!h)
-  const rows =
-    valid && !missing.length && !foreign.length && ctx.data[ctx.benchmark]
-      ? portfolioSeries(histories, weights, ctx.period, ctx.data[ctx.benchmark])
-      : []
+  const simulation = simulatePortfolio(
+    histories,
+    weights,
+    ctx.window,
+    ctx.data[ctx.benchmark],
+    settings,
+  )
+  const { rows, holdings, rebalances } = simulation
+  const validCapital =
+    Number.isFinite(settings.capital) &&
+    settings.capital > 0 &&
+    settings.capital <= 1e9
   const values = rows.map((r) => Number(r.Portfolio)),
     returns = dailyReturns(values),
     last = values.at(-1),
-    change = last == null ? null : (last / 10000 - 1) * 100
+    change = last == null ? null : (last / settings.capital - 1) * 100
   const benchmarkEnd = rows.at(-1)?.[ctx.benchmark],
     bmChange =
-      benchmarkEnd == null ? null : (Number(benchmarkEnd) / 10000 - 1) * 100
+      benchmarkEnd == null
+        ? null
+        : (Number(benchmarkEnd) / settings.capital - 1) * 100
   const bins = Array.from({ length: 9 }, (_, i) => ({
     name: i === 0 ? '< −3.5%' : i === 8 ? '> 3.5%' : `${i - 4}%`,
     value: 0,
@@ -286,14 +322,45 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
       <div className="portfolio-grid">
         <Panel
           title="Build a hypothetical portfolio"
-          eyebrow="STARTING VALUE · $10,000"
+          eyebrow="ALLOCATION & SIMULATION"
         >
+          <div className="simulation-settings">
+            <label>
+              Starting value (USD)
+              <input
+                aria-label="Starting value in USD"
+                type="number"
+                min="1"
+                max="1000000000"
+                step="1000"
+                value={settings.capital || ''}
+                onChange={(e) =>
+                  setSettings({ ...settings, capital: Number(e.target.value) })
+                }
+              />
+            </label>
+            <label>
+              Rebalancing
+              <select
+                aria-label="Rebalancing frequency"
+                value={settings.rebalance}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    rebalance: e.target.value as Rebalance,
+                  })
+                }
+              >
+                <option value="none">Buy and hold</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </label>
+          </div>
           <div className="preset-row">
             {presets.map((p) => (
-              <button
-                key={p.name}
-                onClick={() => update(p.weights as Record<string, number>)}
-              >
+              <button key={p.name} onClick={() => update(p.weights)}>
                 {p.name}
               </button>
             ))}
@@ -352,26 +419,28 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
             ))}
           </div>
           <div className="add-allocation">
-            <select
-              aria-label="Asset to add to portfolio"
-              value={newSymbol}
-              onChange={(e) => setNewSymbol(e.target.value)}
-            >
-              {CATALOG.filter((a) => !symbols.includes(a.symbol)).map((a) => (
-                <option key={a.symbol} value={a.symbol}>
-                  {a.symbol} · {a.name}
-                </option>
-              ))}
-            </select>
-            <button
-              className="icon-button"
-              aria-label="Add portfolio asset"
-              disabled={symbols.length >= 12 || symbols.includes(newSymbol)}
-              onClick={() => update({ ...weights, [newSymbol]: 0 })}
-            >
-              <Plus size={18} />
-            </button>
+            <SymbolSearch
+              compact
+              placeholder="Add a portfolio stock or ETF…"
+              onSelect={(symbol) => {
+                if (symbols.includes(symbol)) {
+                  setAddMessage(`${symbol} is already in this portfolio.`)
+                  return
+                }
+                if (symbols.length >= 12) {
+                  setAddMessage('A portfolio can contain up to 12 assets.')
+                  return
+                }
+                setAddMessage('')
+                update({ ...weights, [symbol]: 0 })
+              }}
+            />
           </div>
+          {addMessage && (
+            <p className="small muted" role="status">
+              {addMessage}
+            </p>
+          )}
           <div className="allocation-total">
             <span>Total allocation</span>
             <strong className={valid ? 'positive' : 'negative'}>
@@ -383,6 +452,12 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
               Set allocations to 100% to calculate the portfolio.
             </p>
           )}
+          {!validCapital && (
+            <p className="validation-message">
+              Enter a starting value greater than $0 and no more than $1
+              billion.
+            </p>
+          )}
           {missing.length > 0 && (
             <button
               className="button"
@@ -391,6 +466,14 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
               Load {missing.join(', ')} history
             </button>
           )}
+          {missing.map(
+            (s) =>
+              ctx.errors[s] && (
+                <p key={s} className="validation-message">
+                  {s}: {ctx.errors[s]}
+                </p>
+              ),
+          )}
           {foreign.length > 0 && (
             <p className="validation-message">
               Portfolio simulation supports USD assets only. Remove{' '}
@@ -398,26 +481,57 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
             </p>
           )}
           <p className="panel-note">
-            Buy and hold from the first common observation. No rebalancing, new
-            deposits, taxes or trading costs. Weights are saved on this device.
+            {settings.rebalance === 'none'
+              ? 'Positions are held from the first common observation; weights drift with returns.'
+              : 'Target weights are restored after the first available close of each new calendar interval. That day’s return uses the prior holdings.'}{' '}
+            No deposits, taxes or trading costs. Settings are saved on this
+            device.
           </p>
         </Panel>
         <Panel
           title="Your portfolio through time"
           action={
-            <button className="button" disabled={!rows.length} onClick={() => downloadCSV(`market-atlas-portfolio-${ctx.period}.csv`, ['Date', 'Portfolio value (USD)', `${ctx.benchmark} value (USD)`], rows.map(row => [row.date, row.Portfolio, row[ctx.benchmark]]))}>Export simulation</button>
+            <button
+              className="button"
+              disabled={!rows.length}
+              onClick={() =>
+                downloadCSV(
+                  `market-atlas-portfolio-${windowKey(ctx.window)}.csv`,
+                  [
+                    'Date',
+                    'Portfolio value (USD)',
+                    `${ctx.benchmark} value (USD)`,
+                    'Starting capital (USD)',
+                    'Rebalancing',
+                  ],
+                  rows.map((row) => [
+                    row.date,
+                    row.Portfolio,
+                    row[ctx.benchmark],
+                    settings.capital,
+                    settings.rebalance,
+                  ]),
+                )
+              }
+            >
+              Export simulation
+            </button>
           }
         >
           <div className="portfolio-value">
             <strong>{usd(last)}</strong>
             <Change value={change} />
-            <span>from a hypothetical $10,000</span>
+            <span>
+              from a hypothetical{' '}
+              {validCapital ? usd(settings.capital) : 'starting value'}
+            </span>
           </div>
           <PerformanceChart
             rows={rows}
             symbols={['Portfolio', ctx.benchmark]}
             benchmark={ctx.benchmark}
             mode="growth"
+            baseline={settings.capital}
             height={330}
             loading={ctx.loading.length > 0}
           />
@@ -427,7 +541,12 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
                 ? `${shortDate(String(rows[0].date))} – ${shortDate(String(rows.at(-1)!.date))}`
                 : 'Waiting for a valid allocation and complete history'}
             </span>
-            <span>Adjusted close basis</span>
+            <span>
+              {settings.rebalance === 'none'
+                ? 'Buy and hold'
+                : `${rebalances} rebalances`}{' '}
+              · adjusted close basis
+            </span>
           </div>
         </Panel>
       </div>
@@ -458,30 +577,53 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
         />
       </div>
       <div className="two-col">
-        <Panel title="What drove the result?">
+        <Panel
+          title="What drove the result?"
+          action={
+            <button
+              className="button"
+              disabled={!holdings.length}
+              onClick={() =>
+                downloadCSV(
+                  `market-atlas-contributions-${windowKey(ctx.window)}.csv`,
+                  [
+                    'Asset',
+                    'Initial weight (%)',
+                    'Final weight (%)',
+                    'Asset buy-and-hold return (%)',
+                    'Investment profit (USD)',
+                    'Contribution (pp)',
+                  ],
+                  holdings.map((h) => [
+                    h.symbol,
+                    h.initialWeight,
+                    h.finalWeight,
+                    h.assetReturn,
+                    h.profit,
+                    h.contribution,
+                  ]),
+                )
+              }
+            >
+              Export contributions
+            </button>
+          }
+        >
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
                   <th>Asset</th>
                   <th className="right">Initial weight</th>
+                  <th className="right">Final weight</th>
                   <th className="right">Asset return</th>
+                  <th className="right">Profit</th>
                   <th className="right">Contribution</th>
                 </tr>
               </thead>
               <tbody>
                 {active.map((s) => {
-                  let r: number | null = null
-                  if (rows.length) {
-                    const points = ctx.data[s].points.filter(
-                      (p) =>
-                        p.date >= String(rows[0].date) &&
-                        p.date <= String(rows.at(-1)!.date),
-                    )
-                    if (points.length > 1)
-                      r =
-                        (points.at(-1)!.adjusted / points[0].adjusted - 1) * 100
-                  }
+                  const holding = holdings.find((h) => h.symbol === s)
                   return (
                     <tr key={s}>
                       <td>
@@ -489,13 +631,14 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
                       </td>
                       <td className="right">{num(weights[s], 0)}%</td>
                       <td className="right">
-                        <Change value={r} />
+                        {holding ? `${num(holding.finalWeight, 1)}%` : '—'}
                       </td>
                       <td className="right">
-                        <Change
-                          value={r === null ? null : (r * weights[s]) / 100}
-                          suffix="pp"
-                        />
+                        <Change value={holding?.assetReturn} />
+                      </td>
+                      <td className="right">{usd(holding?.profit)}</td>
+                      <td className="right">
+                        <Change value={holding?.contribution} suffix="pp" />
                       </td>
                     </tr>
                   )
@@ -504,9 +647,11 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
             </table>
           </div>
           <p className="panel-note">
-            Contribution equals starting weight × asset return over the same
-            portfolio dates. Distributions are reflected only to the extent
-            included by the provider’s adjusted prices.
+            Contribution is the asset’s accumulated investment profit divided by
+            starting portfolio capital, in percentage points. Contributions sum
+            to the portfolio return, including after rebalancing. Asset return
+            is its separate buy-and-hold return over the same dates.
+            Distributions follow the provider’s adjusted prices.
           </p>
         </Panel>
         <Panel
@@ -535,7 +680,7 @@ export function Watchlist({
 }) {
   const available = ctx.watchlist.filter((s) => ctx.data[s]),
     positive = available.filter(
-      (s) => (metrics(ctx.data[s], ctx.period).change ?? -1) > 0,
+      (s) => (metrics(ctx.data[s], ctx.window).change ?? -1) > 0,
     )
   return (
     <>
@@ -554,7 +699,7 @@ export function Watchlist({
           <div className="stats-row three">
             <Stat label="Tracked assets" value={ctx.watchlist.length} />
             <Stat
-              label={`Positive over ${ctx.period}`}
+              label={`Positive over ${ctx.windowLabel}`}
               value={`${positive.length} / ${available.length}`}
               detail="Among loaded assets"
             />
@@ -659,8 +804,10 @@ export function Methodology() {
             <p>
               A period starts at the last observation on or before its calendar
               cutoff. YTD starts at the prior year’s final trading observation.
-              Charts use dates common to every selected asset. Assets without
-              enough history show no result for that period.
+              Custom windows use the same baseline rule and exclude observations
+              after the chosen end date. Charts use dates common to every
+              selected asset. Assets without enough history show no result for
+              that period.
             </p>
             <p>
               SPY, QQQ, DIA, IWM and VTI are ETF proxies, not the index levels
@@ -698,6 +845,8 @@ export function Methodology() {
               RSI uses Wilder’s 14-session smoothing. Moving averages are simple
               means of the last 50 and 200 adjusted closes. The price range uses
               up to 252 sessions of adjusted closes, not intraday highs or lows.
+              In a custom date window, these indicators stop at its selected end
+              date. Latest quote cards remain current.
             </p>
             <p>
               The momentum map compares 3-month and 1-month excess returns with
@@ -709,15 +858,45 @@ export function Methodology() {
             <span className="method-number">06</span>
             <h3>Portfolio research</h3>
             <p>
-              The simulator invests a hypothetical $10,000 at initial weights on
-              the first shared date, then holds those positions. Only
-              USD-denominated assets are supported. No rebalancing, commissions,
-              tax, cash flows or execution costs are modeled.
+              The simulator invests the selected starting capital at target
+              weights on the first shared date. Buy-and-hold weights drift.
+              Optional monthly, quarterly or yearly rebalancing restores targets
+              after the first available closing observation in each new calendar
+              interval. That day’s return uses the prior holdings; subsequent
+              returns use the restored targets. Only USD-denominated assets are
+              supported. Commissions, tax, cash flows and execution costs are
+              excluded.
+            </p>
+            <p>
+              Each contribution is the accumulated profit earned by an asset,
+              divided by initial portfolio capital. Transfers during rebalancing
+              are not investment profit. Contributions therefore sum to the
+              total return. Fractional positions are allowed.
             </p>
             <p>
               Results depend on the selected assets and dates and omit failed or
               delisted stocks that a present-day selection may miss. This
               survivorship effect can overstate historical opportunity.
+            </p>
+          </article>
+          <article>
+            <span className="method-number">07</span>
+            <h3>Rolling trends & seasonality</h3>
+            <p>
+              Rolling measures use the specified number of trailing observations
+              on dates shared by every selected asset. Earlier history supplies
+              warm-up observations, but only points inside the chosen display
+              window are plotted. No future prices enter a trailing calculation.
+              Constant-price relationships are undefined and stay blank.
+            </p>
+            <p>
+              Monthly returns compare the last available close with the
+              preceding month’s last close, requiring a baseline within seven
+              days of the new month. Current months and months ending more than
+              four calendar days before month-end are partial. Seasonal averages
+              exclude partial or missing months; five years provides only a
+              small sample. Calendars use the full available history
+              independently of the display window.
             </p>
           </article>
         </div>

@@ -10,12 +10,12 @@ import {
   maxDrawdown,
   metrics,
   performance,
-  portfolioSeries,
   rsi,
   stdev,
 } from './analytics'
 import type { History } from './types'
 import { normalizeChart, parseSymbols } from '../../worker/index'
+import { simulatePortfolio } from './portfolio'
 
 function history(symbol: string, prices: number[], dates?: string[]): History {
   return {
@@ -124,7 +124,7 @@ describe('financial calculations', () => {
     const dates = ['2026-09-01', '2026-09-04', '2026-09-08'],
       a = history('A', [100, 110, 120], dates),
       b = history('B', [100, 95, 90], dates)
-    const rows = portfolioSeries([a, b], { A: 60, B: 40 }, '1W', a)
+    const { rows } = simulatePortfolio([a, b], { A: 60, B: 40 }, '1W', a)
     expect(rows[0].Portfolio).toBe(10000)
     expect(rows.at(-1)!.Portfolio).toBeCloseTo(10800)
     expect(rows.at(-1)!.A).toBeCloseTo(12000)

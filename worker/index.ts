@@ -22,7 +22,7 @@ type YahooChart = {
 }
 const SYMBOL = /^[A-Z0-9^][A-Z0-9.^=\-]{0,19}$/
 const SOURCE = 'Yahoo Finance'
-const CACHE_VERSION = 'v2'
+const CACHE_VERSION = 'v3'
 
 function json(
   value: unknown,
@@ -60,35 +60,59 @@ export function normalizeChart(payload: YahooChart, symbol: string): History {
   const valid = result.timestamp
     .map((time, i) => ({ time, i }))
     .filter(
-      ({ i }) =>
-        typeof quote?.close?.[i] === 'number' && Number(quote.close[i]) > 0,
+      ({ i, time }) =>
+        typeof quote?.close?.[i] === 'number' &&
+        Number.isFinite(quote.close[i]) &&
+        Number(quote.close[i]) > 0 &&
+        Number.isFinite(new Date(time * 1000).getTime()),
     )
   const adjusted =
     !!adj &&
-    valid.every(({ i }) => typeof adj[i] === 'number' && Number(adj[i]) > 0)
+    valid.every(
+      ({ i }) =>
+        typeof adj[i] === 'number' &&
+        Number.isFinite(adj[i]) &&
+        Number(adj[i]) > 0,
+    )
   const points: PricePoint[] = valid.map(({ time, i }) => ({
     date: new Date(time * 1000).toISOString().slice(0, 10),
     close: Number(quote!.close![i]),
     adjusted: adjusted ? Number(adj![i]) : Number(quote!.close![i]),
-    volume: Number(quote?.volume?.[i] ?? 0),
+    volume:
+      typeof quote?.volume?.[i] === 'number' &&
+      Number.isFinite(quote.volume[i]) &&
+      Number(quote.volume[i]) >= 0
+        ? Number(quote.volume[i])
+        : null,
   }))
   const unique = [...new Map(points.map((p) => [p.date, p])).values()].sort(
     (a, b) => a.date.localeCompare(b.date),
   )
   if (unique.length < 2)
     throw new Error('There is not enough history to compare this symbol.')
-  const meta = result.meta
+  const meta = result.meta ?? {}
+  const latestPrice = Number(meta.regularMarketPrice)
+  const marketTimestamp = Number(meta.regularMarketTime)
   return {
     symbol,
     name: String(meta.longName ?? meta.shortName ?? symbol),
-    currency: String(meta.currency ?? 'USD'),
+    currency:
+      typeof meta.currency === 'string' && meta.currency
+        ? meta.currency
+        : 'Unknown',
     exchange: String(meta.fullExchangeName ?? meta.exchangeName ?? ''),
     points: unique,
     fetchedAt: new Date().toISOString(),
     marketTime: new Date(
-      Number(meta.regularMarketTime ?? result.timestamp.at(-1)) * 1000,
+      (marketTimestamp > 0 &&
+      Number.isFinite(new Date(marketTimestamp * 1000).getTime())
+        ? marketTimestamp
+        : Math.max(...valid.map((v) => v.time))) * 1000,
     ).toISOString(),
-    price: Number(meta.regularMarketPrice ?? unique.at(-1)!.close),
+    price:
+      Number.isFinite(latestPrice) && latestPrice > 0
+        ? latestPrice
+        : unique.at(-1)!.close,
     source: SOURCE,
     adjusted,
     ...(!adjusted

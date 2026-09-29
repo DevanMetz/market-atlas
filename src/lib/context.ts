@@ -1,9 +1,11 @@
-import type { History, Period } from './types'
+import type { History, Period, TimeWindow } from './types'
 export type MarketContext = {
   data: Record<string, History>
   errors: Record<string, string>
   loading: string[]
   period: Period
+  window: TimeWindow
+  windowLabel: string
   benchmark: string
   selected: string[]
   setSelected: (symbols: string[]) => void
