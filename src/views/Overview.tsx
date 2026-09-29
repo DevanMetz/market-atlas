@@ -8,13 +8,14 @@ import { useState } from 'react'
 import { asset, SECTORS } from '../lib/catalog'
 import {
   chartData,
+  cutoff,
   metrics,
   num,
   performance,
   shortDate,
 } from '../lib/analytics'
 import type { MarketContext } from '../lib/context'
-import type { History } from '../lib/types'
+import type { History, Period, TimeWindow } from '../lib/types'
 import { Change, Panel, Stat, SymbolChips } from '../components/UI'
 import {
   PerformanceChart,
@@ -298,9 +299,16 @@ export function Overview({ ctx }: { ctx: MarketContext }) {
 
 export function SectorExplorer({ ctx }: { ctx: MarketContext }) {
   const [relative, setRelative] = useState(false)
+  const end = typeof ctx.window === 'string' ? undefined : ctx.window.end
+  const horizon = (period: Period): TimeWindow =>
+    end ? { start: cutoff(period, end), end } : period
   const rotation = SECTORS.flatMap((s) => {
-    const m = metrics(ctx.data[s.symbol], '3M', ctx.data[ctx.benchmark]),
-      n = metrics(ctx.data[s.symbol], '1M', ctx.data[ctx.benchmark])
+    const m = metrics(
+        ctx.data[s.symbol],
+        horizon('3M'),
+        ctx.data[ctx.benchmark],
+      ),
+      n = metrics(ctx.data[s.symbol], horizon('1M'), ctx.data[ctx.benchmark])
     return m.excess === null || n.excess === null
       ? []
       : [
@@ -352,7 +360,12 @@ export function SectorExplorer({ ctx }: { ctx: MarketContext }) {
         <Panel
           title="Sector momentum map"
           eyebrow={`RELATIVE TO ${ctx.benchmark}`}
-          action={<span className="small muted">Fixed 1M / 3M windows</span>}
+          action={
+            <span className="small muted">
+              1M / 3M ·{' '}
+              {end ? `as of ${shortDate(end)}` : 'latest observations'}
+            </span>
+          }
         >
           <RotationChart items={rotation} />
           <p className="panel-note">
@@ -428,7 +441,9 @@ export function SectorExplorer({ ctx }: { ctx: MarketContext }) {
                     ['1W', '1M', '3M', '6M', 'YTD', '1Y', '3Y', '5Y'] as const
                   ).map((p) => (
                     <td key={p} className="right">
-                      <Change value={performance(ctx.data[s.symbol], p)} />
+                      <Change
+                        value={performance(ctx.data[s.symbol], horizon(p))}
+                      />
                     </td>
                   ))}
                 </tr>
@@ -437,6 +452,9 @@ export function SectorExplorer({ ctx }: { ctx: MarketContext }) {
           </table>
         </div>
         <p className="panel-note">
+          {end
+            ? `Each horizon ends on or before ${shortDate(end)}. `
+            : 'Each horizon ends at the latest available observation. '}
           Multi-year returns are cumulative. ETFs are investable proxies and may
           differ from their underlying indexes because of fees, distributions
           and tracking differences.

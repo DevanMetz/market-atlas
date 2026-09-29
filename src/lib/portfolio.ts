@@ -58,11 +58,7 @@ export function simulatePortfolio(
     return EMPTY
   const symbols = Object.keys(weights).filter((s) => weights[s] > 0)
   const totalWeight = symbols.reduce((sum, s) => sum + weights[s], 0)
-  if (
-    !symbols.length ||
-    Math.abs(totalWeight - 100) >= 0.001
-  )
-    return EMPTY
+  if (!symbols.length || Math.abs(totalWeight - 100) >= 0.001) return EMPTY
   const unique = new Map(histories.map((h) => [h.symbol, h]))
   if (
     symbols.some((s) => !unique.has(s) || unique.get(s)!.currency !== 'USD') ||
@@ -117,7 +113,7 @@ export function simulatePortfolio(
     rebalances,
     holdings: symbols.map((s) => ({
       symbol: s,
-      initialWeight: weights[s] / totalWeight * 100,
+      initialWeight: (weights[s] / totalWeight) * 100,
       finalWeight: (positions[s] / finalTotal) * 100,
       assetReturn: (values[s].at(-1)! / values[s][0] - 1) * 100,
       profit: profit[s],

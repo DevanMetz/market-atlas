@@ -313,3 +313,24 @@ test('new research controls fit the mobile viewport', async ({ page }) => {
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390)
 })
+
+test('historical windows date the technical snapshot and sector horizons', async ({
+  page,
+}) => {
+  await page.goto('/?view=stocks&stock=AAPL&start=2025-12-31&end=2026-03-31')
+  await expect(page.locator('.technical-date')).toHaveText('As of Mar 31, 2026')
+  await expect(page.locator('.stock-detail .chart-caption')).toContainText(
+    'Mar 31, 2026',
+  )
+  await page
+    .getByRole('button', { name: 'Sector explorer', exact: true })
+    .click()
+  await expect(
+    page.getByText('1M / 3M · as of Mar 31, 2026', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByText('Each horizon ends on or before Mar 31, 2026.', {
+      exact: false,
+    }),
+  ).toBeVisible()
+})

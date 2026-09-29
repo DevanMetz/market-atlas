@@ -609,7 +609,12 @@ export function Portfolio({ ctx }: { ctx: MarketContext }) {
             </button>
           }
         >
-          <div className="table-scroll">
+          <div
+            className="table-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label="Portfolio return contributions"
+          >
             <table>
               <thead>
                 <tr>

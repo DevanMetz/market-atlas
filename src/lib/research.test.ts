@@ -270,10 +270,13 @@ describe('portfolio rebalancing and attribution', () => {
     )
   })
   it('normalizes harmless weight rounding without creating or losing capital', () => {
-    const result = simulatePortfolio([a,b],{A:49.9999,B:50},window,a,{capital:10000,rebalance:'monthly'})
-    expect(result.rows[0].Portfolio).toBeCloseTo(10000,8)
-    const profit = result.holdings.reduce((sum,h) => sum+h.profit,0)
-    expect(profit).toBeCloseTo(Number(result.rows.at(-1)!.Portfolio)-10000,8)
+    const result = simulatePortfolio([a, b], { A: 49.9999, B: 50 }, window, a, {
+      capital: 10000,
+      rebalance: 'monthly',
+    })
+    expect(result.rows[0].Portfolio).toBeCloseTo(10000, 8)
+    const profit = result.holdings.reduce((sum, h) => sum + h.profit, 0)
+    expect(profit).toBeCloseTo(Number(result.rows.at(-1)!.Portfolio) - 10000, 8)
   })
 })
 

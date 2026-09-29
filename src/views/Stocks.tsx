@@ -358,9 +358,11 @@ export function StockDetail({
           </div>
           <div className="chart-caption">
             <span>
-              {history
-                ? `Data through ${shortDate(history.points.at(-1)!.date)}`
-                : 'Loading history…'}
+              {m.start && m.end
+                ? `${shortDate(m.start)} – ${shortDate(m.end)}`
+                : history
+                  ? 'Not enough history for this window'
+                  : 'Loading history…'}
             </span>
             <a
               href={`https://finance.yahoo.com/quote/${encodeURIComponent(symbol)}/`}

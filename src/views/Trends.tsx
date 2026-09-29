@@ -209,7 +209,8 @@ export function TrendsView({ ctx }: { ctx: MarketContext }) {
           {relation
             ? 'The benchmark itself is omitted from the lines: its correlation and beta to itself are 1 when variance is nonzero.'
             : 'Returns cover the trailing window; volatility is annualized.'}{' '}
-          All selected assets must have data. Undefined relationships stay blank.
+          All selected assets must have data. Undefined relationships stay
+          blank.
         </p>
       </Panel>
       <Panel
@@ -279,7 +280,12 @@ export function TrendsView({ ctx }: { ctx: MarketContext }) {
             Uses the full available history, independent of the range above.
           </span>
         </div>
-        <div className="table-scroll">
+        <div
+          className="table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="Monthly return calendar"
+        >
           <table className="month-calendar">
             <thead>
               <tr>
