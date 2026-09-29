@@ -8,8 +8,14 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*"],
   },
-  "ratelimits": [{ "name": "API_LIMITER", "namespace_id": "2026092901", "simple": { "limit": 90, "period": 60 } }],
-  "observability": { "enabled": true }
+  "ratelimits": [
+    {
+      "name": "API_LIMITER",
+      "namespace_id": "2026092901",
+      "simple": { "limit": 90, "period": 60 },
+    },
+  ],
+  "observability": { "enabled": true },
 }
