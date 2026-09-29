@@ -1,0 +1,56 @@
+import type { Asset } from './types'
+
+export const SECTORS: Asset[] = [
+  { symbol: 'XLK', name: 'Technology', kind: 'Sector', color: '#b8e986' },
+  { symbol: 'XLF', name: 'Financials', kind: 'Sector', color: '#8ab4ed' },
+  { symbol: 'XLV', name: 'Health care', kind: 'Sector', color: '#bfabeb' },
+  { symbol: 'XLY', name: 'Consumer discretionary', kind: 'Sector', color: '#f0b26f' },
+  { symbol: 'XLC', name: 'Communication services', kind: 'Sector', color: '#76c7c2' },
+  { symbol: 'XLI', name: 'Industrials', kind: 'Sector', color: '#e6c97b' },
+  { symbol: 'XLP', name: 'Consumer staples', kind: 'Sector', color: '#7ac6a0' },
+  { symbol: 'XLE', name: 'Energy', kind: 'Sector', color: '#d89390' },
+  { symbol: 'XLU', name: 'Utilities', kind: 'Sector', color: '#89b2c0' },
+  { symbol: 'XLRE', name: 'Real estate', kind: 'Sector', color: '#bca995' },
+  { symbol: 'XLB', name: 'Materials', kind: 'Sector', color: '#bebf71' },
+]
+export const BENCHMARKS: Asset[] = [
+  { symbol: 'SPY', name: 'S&P 500', kind: 'Benchmark', color: '#f4f5f1' },
+  { symbol: 'QQQ', name: 'Nasdaq 100', kind: 'Benchmark', color: '#b1a0e8' },
+  { symbol: 'DIA', name: 'Dow Jones', kind: 'Benchmark', color: '#79b8d9' },
+  { symbol: 'IWM', name: 'Russell 2000', kind: 'Benchmark', color: '#e7b87e' },
+  { symbol: 'VTI', name: 'Total U.S. market', kind: 'Benchmark', color: '#91cdb0' },
+]
+export const GLOBAL: Asset[] = [
+  { symbol: 'EFA', name: 'Developed markets', kind: 'Global' },
+  { symbol: 'EEM', name: 'Emerging markets', kind: 'Global' },
+  { symbol: 'EWJ', name: 'Japan equities', kind: 'Global' },
+  { symbol: 'FXI', name: 'China large caps', kind: 'Global' },
+  { symbol: 'INDA', name: 'India equities', kind: 'Global' },
+  { symbol: 'GLD', name: 'Gold', kind: 'Global' },
+  { symbol: 'SLV', name: 'Silver', kind: 'Global' },
+  { symbol: 'USO', name: 'Oil futures fund', kind: 'Global' },
+  { symbol: 'TLT', name: '20+ year U.S. Treasuries', kind: 'Global' },
+  { symbol: 'IEF', name: '7–10 year U.S. Treasuries', kind: 'Global' },
+  { symbol: 'AGG', name: 'U.S. aggregate bonds', kind: 'Global' },
+  { symbol: 'HYG', name: 'High yield bonds', kind: 'Global' },
+  { symbol: 'UUP', name: 'U.S. dollar fund', kind: 'Global' },
+  { symbol: 'VNQ', name: 'U.S. real estate', kind: 'Global' },
+]
+const STOCK_ROWS = [
+  ['AAPL','Apple','Technology'],['MSFT','Microsoft','Technology'],['NVDA','NVIDIA','Technology'],['AVGO','Broadcom','Technology'],['AMD','Advanced Micro Devices','Technology'],['ORCL','Oracle','Technology'],['CRM','Salesforce','Technology'],['PLTR','Palantir','Technology'],['ADBE','Adobe','Technology'],['INTC','Intel','Technology'],
+  ['GOOGL','Alphabet','Communication services'],['META','Meta Platforms','Communication services'],['NFLX','Netflix','Communication services'],['DIS','Walt Disney','Communication services'],['T','AT&T','Communication services'],
+  ['AMZN','Amazon','Consumer discretionary'],['TSLA','Tesla','Consumer discretionary'],['HD','Home Depot','Consumer discretionary'],['MCD',"McDonald’s",'Consumer discretionary'],['NKE','Nike','Consumer discretionary'],
+  ['JPM','JPMorgan Chase','Financials'],['BRK-B','Berkshire Hathaway','Financials'],['V','Visa','Financials'],['MA','Mastercard','Financials'],['BAC','Bank of America','Financials'],['GS','Goldman Sachs','Financials'],
+  ['LLY','Eli Lilly','Health care'],['UNH','UnitedHealth Group','Health care'],['JNJ','Johnson & Johnson','Health care'],['ABBV','AbbVie','Health care'],['MRK','Merck','Health care'],['PFE','Pfizer','Health care'],
+  ['WMT','Walmart','Consumer staples'],['COST','Costco','Consumer staples'],['PG','Procter & Gamble','Consumer staples'],['KO','Coca-Cola','Consumer staples'],['PEP','PepsiCo','Consumer staples'],
+  ['XOM','Exxon Mobil','Energy'],['CVX','Chevron','Energy'],['COP','ConocoPhillips','Energy'],
+  ['GE','GE Aerospace','Industrials'],['CAT','Caterpillar','Industrials'],['RTX','RTX','Industrials'],['UBER','Uber','Industrials'],['DE','Deere','Industrials'],
+  ['NEE','NextEra Energy','Utilities'],['DUK','Duke Energy','Utilities'],['SO','Southern Company','Utilities'],
+  ['PLD','Prologis','Real estate'],['AMT','American Tower','Real estate'],['EQIX','Equinix','Real estate'],
+  ['LIN','Linde','Materials'],['SHW','Sherwin-Williams','Materials'],['FCX','Freeport-McMoRan','Materials'],
+]
+export const STOCKS: Asset[] = STOCK_ROWS.map(([symbol,name,sector]) => ({symbol,name,sector,kind:'Stock'}))
+export const CATALOG = [...SECTORS, ...BENCHMARKS, ...GLOBAL, ...STOCKS]
+export const COLORS = ['#b8e986','#8ab4ed','#d89390','#bfabeb','#f0b26f','#76c7c2','#e6c97b','#7ac6a0','#e495c0','#89b2c0','#bebf71','#f4f5f1']
+export const asset = (symbol: string): Asset => CATALOG.find(a=>a.symbol===symbol) ?? {symbol,name:symbol,kind:'Stock'}
+export const PERIODS = ['1W','1M','3M','6M','YTD','1Y','3Y','5Y'] as const

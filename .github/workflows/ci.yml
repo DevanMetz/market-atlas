@@ -1,0 +1,26 @@
+name: Validate
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Browser checks
+        run: |
+          npx vite preview --host 127.0.0.1 --port 8795 &
+          npx playwright test
+        env:
+          PLAYWRIGHT_CHANNEL: chromium
