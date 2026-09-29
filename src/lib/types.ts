@@ -8,6 +8,7 @@ export type View =
   | 'sectors'
   | 'compare'
   | 'trends'
+  | 'risk'
   | 'stocks'
   | 'correlations'
   | 'portfolio'

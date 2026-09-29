@@ -219,6 +219,8 @@ input[type='number']::-webkit-inner-spin-button {
   display: flex;
   flex-direction: column;
   padding: 30px 16px 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .brand {
   display: flex;
@@ -3586,6 +3588,122 @@ td {
 }
 .portfolio-grid > .panel:first-child .add-allocation {
   max-width: none;
+}
+.risk-focus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 26px 0 16px;
+}
+.risk-focus label,
+.recovery-actions label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  color: #b5c2b7;
+}
+.risk-focus select {
+  min-width: 260px;
+  min-height: 40px;
+}
+.risk-focus > span {
+  color: var(--muted);
+  font-size: 13px;
+  padding-bottom: 10px;
+}
+.risk-table {
+  min-width: 950px;
+}
+.risk-table .selected-risk {
+  background: #b8e98609;
+}
+.risk-table .selected-risk strong {
+  color: var(--green);
+}
+.recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.drawdown-table {
+  min-width: 880px;
+}
+.drawdown-table th,
+.risk-table th {
+  white-space: normal;
+  line-height: 1.5;
+}
+.ongoing-badge {
+  display: inline-block;
+  padding: 5px 9px;
+  border: 1px solid #665b36;
+  border-radius: 5px;
+  color: #dccb94;
+  background: #332d1c;
+  font-size: 12px;
+}
+.tail-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 22px 18px;
+}
+.tail-metrics .stat {
+  margin: 0;
+  min-width: 0;
+}
+.tail-metrics .stat > strong {
+  font-size: 26px;
+}
+.recovery-math {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 22px 18px;
+}
+.recovery-math > div {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  background: #131b16;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+.recovery-math span {
+  color: #b5c2b7;
+  font-size: 14px;
+}
+.recovery-math strong {
+  color: #d3dfc9;
+  font-size: 23px;
+}
+.recovery-math small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+@media (max-width: 760px) {
+  .risk-focus label,
+  .risk-focus select {
+    width: 100%;
+    min-width: 0;
+  }
+  .recovery-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .tail-metrics,
+  .recovery-math {
+    padding: 0 16px 16px;
+  }
+  .tail-metrics .stat {
+    padding: 14px 10px;
+  }
+  .tail-metrics .stat > strong {
+    font-size: 23px;
+  }
 }
 @media (min-width: 761px) and (max-height: 800px) {
   .sidebar {

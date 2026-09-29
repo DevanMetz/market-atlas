@@ -904,6 +904,27 @@ export function Methodology() {
               independently of the display window.
             </p>
           </article>
+          <article>
+            <span className="method-number">08</span>
+            <h3>Drawdowns & recoveries</h3>
+            <p>
+              Risk Lab aligns every selected asset on shared dates and starts
+              its running peak at the beginning of that window. An episode
+              starts at the last observed peak and ends when adjusted close
+              reaches or exceeds it. Open episodes have no known recovery time.
+              Calendar duration and trading observations are separate measures;
+              earlier losses outside the window are excluded.
+            </p>
+            <p>
+              Annualized return = (ending / starting adjusted close)^(365.25 /
+              calendar days) − 1, shown only after at least 365 days. The 5th
+              percentile linearly interpolates between sorted daily returns. The
+              worst-5% average uses the lowest 5% of observed returns, rounding
+              the count up. Both tail measures require at least 60 returns. They
+              describe a historical sample and do not estimate a guaranteed
+              future loss limit.
+            </p>
+          </article>
         </div>
       </Panel>
       <Panel title="Coverage & practical limits">

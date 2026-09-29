@@ -16,6 +16,7 @@ import {
   Menu,
   RefreshCw,
   TrendingUp,
+  TrendingDown,
   Search,
   Share2,
   Star,
@@ -47,6 +48,7 @@ import { Sparkline } from './components/Charts'
 import { Comparison, Overview, SectorExplorer } from './views/Overview'
 import { StocksView } from './views/Stocks'
 import { TrendsView } from './views/Trends'
+import { RiskView } from './views/Risk'
 import {
   Correlations,
   Methodology,
@@ -60,9 +62,10 @@ const NAV = [
   { id: 'compare', name: 'Compare assets', icon: GitCompareArrows, tag: '03' },
   { id: 'stocks', name: 'Stock screener', icon: Search, tag: '04' },
   { id: 'trends', name: 'Trend lab', icon: TrendingUp, tag: '05' },
-  { id: 'correlations', name: 'Correlations', icon: Activity, tag: '06' },
-  { id: 'portfolio', name: 'Portfolio lab', icon: Wallet, tag: '07' },
-  { id: 'watchlist', name: 'Watchlist', icon: Star, tag: '08' },
+  { id: 'risk', name: 'Risk lab', icon: TrendingDown, tag: '06' },
+  { id: 'correlations', name: 'Correlations', icon: Activity, tag: '07' },
+  { id: 'portfolio', name: 'Portfolio lab', icon: Wallet, tag: '08' },
+  { id: 'watchlist', name: 'Watchlist', icon: Star, tag: '09' },
 ] as const
 const META: Record<View, { title: string; subtitle: string }> = {
   overview: {
@@ -87,6 +90,11 @@ const META: Record<View, { title: string; subtitle: string }> = {
     title: 'Trend lab',
     subtitle:
       'Explore changing returns, risk and relationships, one window at a time.',
+  },
+  risk: {
+    title: 'Risk lab',
+    subtitle:
+      'Compare losses, recovery times, and historical daily returns.',
   },
   correlations: {
     title: 'Correlations',
@@ -154,11 +162,16 @@ export default function App() {
   const analysisLabel = windowLabel(analysisWindow)
   const [selected, setSelected] = useState(initialSymbols),
     [focus, setFocus] = useState(() =>
-      /^[A-Z0-9^][A-Z0-9.^=\-]{0,19}$/.test(initial.get('stock') ?? '')
-        ? initial.get('stock')!
+      /^[A-Z0-9^][A-Z0-9.^=\-]{0,19}$/.test(
+        initial.get('stock') ?? initial.get('asset') ?? '',
+      )
+        ? (initial.get('stock') ?? initial.get('asset'))!
         : 'AAPL',
     ),
     [watchlist, setWatchlist] = useState<string[]>(savedWatchlist)
+  const riskFocus = [...selected, benchmark].includes(focus)
+    ? focus
+    : (selected[0] ?? benchmark)
   const [mobile, setMobile] = useState(false),
     [toast, setToast] = useState('')
   const notify = useCallback((message: string) => setToast(message), [])
@@ -176,12 +189,13 @@ export default function App() {
       symbols: selected.join(','),
     })
     if (view === 'stocks') query.set('stock', focus)
+    if (view === 'risk') query.set('asset', riskFocus)
     if (dateRange) {
       query.set('start', dateRange.start)
       query.set('end', dateRange.end)
     }
     window.history.replaceState({}, '', `${window.location.pathname}?${query}`)
-  }, [view, period, benchmark, selected, focus, dateRange])
+  }, [view, period, benchmark, selected, focus, riskFocus, dateRange])
   useEffect(() => {
     try {
       localStorage.setItem('market-atlas-watchlist', JSON.stringify(watchlist))
@@ -225,7 +239,7 @@ export default function App() {
           : [...prev, symbol],
     )
   const addSymbol = (symbol: string) => {
-    if (view === 'compare' || view === 'trends') {
+    if (view === 'compare' || view === 'trends' || view === 'risk') {
       if (!selected.includes(symbol)) {
         if (selected.length >= 12) {
           notify('A comparison can include up to 12 assets plus its benchmark.')
@@ -234,6 +248,7 @@ export default function App() {
         setSelected([...selected, symbol])
         notify(`${symbol} added to comparison`)
       }
+      if (view === 'risk') setFocus(symbol)
     } else if (view === 'watchlist') {
       setWatchlist((prev) =>
         prev.includes(symbol) ? prev : [...prev, symbol].slice(0, 100),
@@ -423,7 +438,7 @@ export default function App() {
           </a>
           <div className="sidebar-status">
             <span>PUBLIC RESEARCH WORKSPACE</span>
-            <small>Market Atlas · v1.1</small>
+            <small>Market Atlas · v1.2</small>
           </div>
         </div>
       </aside>
@@ -482,9 +497,13 @@ export default function App() {
                 <Share2 size={14} />
                 <span>Share view</span>
               </button>
-              {!['methodology', 'portfolio', 'correlations', 'trends'].includes(
-                view,
-              ) && (
+              {![
+                'methodology',
+                'portfolio',
+                'correlations',
+                'trends',
+                'risk',
+              ].includes(view) && (
                 <button
                   className="button"
                   aria-label="Export CSV"
@@ -537,7 +556,7 @@ export default function App() {
                   compact
                   onSelect={addSymbol}
                   placeholder={
-                    view === 'compare' || view === 'trends'
+                    view === 'compare' || view === 'trends' || view === 'risk'
                       ? 'Add stock or ETF to comparison…'
                       : view === 'watchlist'
                         ? 'Add stock or ETF to watchlist…'
@@ -620,6 +639,9 @@ export default function App() {
           {view === 'sectors' && <SectorExplorer ctx={ctx} />}
           {view === 'compare' && <Comparison ctx={ctx} />}
           {view === 'trends' && <TrendsView ctx={ctx} />}
+          {view === 'risk' && (
+            <RiskView ctx={ctx} focus={riskFocus} onFocus={setFocus} />
+          )}
           {view === 'stocks' && (
             <StocksView ctx={ctx} focus={focus} onFocus={openStock} />
           )}

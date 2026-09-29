@@ -334,3 +334,126 @@ test('historical windows date the technical snapshot and sector horizons', async
     }),
   ).toBeVisible()
 })
+
+test('risk lab preserves focus, filters recovery episodes and exports the observed sample', async ({
+  page,
+}) => {
+  await page.goto('/?view=risk&period=1Y&symbols=XLK,XLF&benchmark=SPY')
+  await expect(
+    page.getByRole('heading', { name: 'Risk lab.', exact: true }),
+  ).toBeVisible()
+  await expect(page.locator('.chart-wrap .recharts-line')).toHaveCount(3)
+  await expect(page.locator('.risk-table tbody tr')).toHaveCount(3)
+  await page.getByLabel('Drawdown asset').selectOption('SPY')
+  await expect(page).toHaveURL(/asset=SPY/)
+  await expect(page.locator('.symbol-chip')).toHaveCount(3)
+  await page.reload()
+  await expect(page.getByLabel('Drawdown asset')).toHaveValue('SPY')
+  await page.getByLabel('Minimum drawdown').selectOption('0')
+  await expect(page.locator('.drawdown-table tbody tr').first()).toBeVisible()
+  const downloadPromise = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export episodes', exact: true })
+    .click()
+  expect((await downloadPromise).suggestedFilename()).toBe(
+    'market-atlas-drawdowns-SPY-1Y.csv',
+  )
+  const result = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .disableRules(['color-contrast'])
+    .analyze()
+  expect(
+    result.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    ),
+  ).toEqual([])
+})
+
+test('risk lab does not compute a partial comparison when an asset is missing', async ({
+  page,
+}) => {
+  await page.unroute('**/api/history?*')
+  await page.route('**/api/history?*', (route) => {
+    const symbols = new URL(route.request().url()).searchParams
+      .get('symbols')!
+      .split(',')
+    return route.fulfill({
+      json: {
+        data: symbols.filter((s) => s !== 'MISSING').map(fixture),
+        errors: symbols.includes('MISSING')
+          ? [{ symbol: 'MISSING', message: 'No price history available' }]
+          : [],
+      },
+    })
+  })
+  await page.goto('/?view=risk&period=1Y&symbols=MISSING,XLK')
+  await expect(page.locator('.data-warning')).toContainText('MISSING')
+  await expect(
+    page.getByRole('button', { name: 'Export risk metrics' }),
+  ).toBeDisabled()
+  await expect(page.locator('.chart-wrap')).toHaveCount(0)
+  await expect(page.locator('.risk-table')).not.toContainText('NaN')
+})
+
+test('risk tables remain scrollable by keyboard on mobile', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/?view=risk&period=1Y&symbols=XLK')
+  await expect(page.locator('.risk-table tbody tr')).toHaveCount(2)
+  const table = page.getByRole('region', {
+    name: 'Risk comparison table',
+    exact: true,
+  })
+  await expect(table).toHaveAttribute('tabindex', '0')
+  await table.focus()
+  await table.press('ArrowRight')
+  await expect
+    .poll(() => table.evaluate((el) => el.scrollLeft))
+    .toBeGreaterThan(0)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390)
+})
+
+test('a decline exactly at the filter boundary is included', async ({
+  page,
+}) => {
+  await page.unroute('**/api/history?*')
+  await page.route('**/api/history?*', (route) => {
+    const symbols = new URL(route.request().url()).searchParams
+      .get('symbols')!
+      .split(',')
+    const dates = ['2026-01-02', '2026-01-05', '2026-01-06']
+    return route.fulfill({
+      json: {
+        data: symbols.map((symbol) => ({
+          ...fixture(symbol),
+          points: [125, 120, 100].map((price, i) => ({
+            date: dates[i],
+            close: price,
+            adjusted: price,
+            volume: 1000,
+          })),
+        })),
+        errors: [],
+      },
+    })
+  })
+  await page.goto('/?view=risk&period=1W&symbols=XLK')
+  await page.getByLabel('Minimum drawdown').selectOption('20')
+  await expect(
+    page.getByRole('region', { name: 'Drawdown episodes', exact: true }),
+  ).toContainText('-20.00%')
+  await expect(
+    page.getByRole('region', { name: 'Drawdown episodes', exact: true }),
+  ).toContainText('Ongoing at end')
+})
+
+test('all navigation remains reachable on a short mobile screen', async ({page}) => {
+  await page.setViewportSize({width:390,height:568})
+  await page.goto('/?view=risk')
+  await page.getByRole('button',{name:'Open navigation',exact:true}).click()
+  await page.getByRole('button',{name:'Watchlist',exact:true}).click()
+  await expect(page.getByRole('heading',{name:'Watchlist.',exact:true})).toBeVisible()
+})
