@@ -17,6 +17,7 @@ import type { MarketContext } from '../lib/context'
 import type { Asset, History } from '../lib/types'
 import { Change, Empty, Panel, Stat, Toggle } from '../components/UI'
 import { PerformanceChart, Sparkline } from '../components/Charts'
+import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
 
 type Sort = 'symbol' | 'price' | 'day' | 'change' | 'volatility' | 'rsi'
 export function AssetTable({
@@ -30,9 +31,19 @@ export function AssetTable({
   onOpen: (symbol: string) => void
   emptyTitle?: string
 }) {
-  const [sort, setSort] = useState<Sort>('change'),
-    [asc, setAsc] = useState(false),
-    [page, setPage] = useState(0)
+  const [sort, setSort] = useQueryChoice(
+    'sort',
+    ['symbol', 'price', 'day', 'change', 'volatility', 'rsi'] as const,
+    'change',
+  )
+  const [direction, setDirection] = useQueryChoice(
+    'direction',
+    ['asc', 'desc'] as const,
+    'desc',
+  )
+  const asc = direction === 'asc'
+  const setAsc = (value: boolean) => setDirection(value ? 'asc' : 'desc')
+  const [page, setPage] = useState(0)
   const rows = assets.map((a) => ({
     ...a,
     ...metrics(ctx.data[a.symbol], ctx.window, ctx.data[ctx.benchmark]),
@@ -387,10 +398,30 @@ export function StocksView({
   focus: string
   onFocus: (symbol: string) => void
 }) {
-  const [sector, setSector] = useState('All sectors'),
-    [filter, setFilter] = useState(''),
-    [above, setAbove] = useState(false),
-    [positive, setPositive] = useState(false)
+  const [sector, setSector] = useQuerySetting(
+    'sector',
+    'All sectors',
+    (value) => value === 'All sectors' || SECTORS.some((s) => s.name === value),
+  )
+  const [filter, setFilter] = useQuerySetting(
+    'filter',
+    '',
+    (value) => value.length <= 80,
+  )
+  const [aboveValue, setAboveValue] = useQueryChoice(
+    'above200',
+    ['yes', 'no'] as const,
+    'no',
+  )
+  const [positiveValue, setPositiveValue] = useQueryChoice(
+    'positive',
+    ['yes', 'no'] as const,
+    'no',
+  )
+  const above = aboveValue === 'yes',
+    positive = positiveValue === 'yes'
+  const setAbove = (value: boolean) => setAboveValue(value ? 'yes' : 'no')
+  const setPositive = (value: boolean) => setPositiveValue(value ? 'yes' : 'no')
   const universe = useMemo(
     () =>
       STOCKS.some((s) => s.symbol === focus)
@@ -425,6 +456,7 @@ export function StocksView({
             className="filter-input"
             placeholder="Filter this list…"
             aria-label="Filter stock list"
+            maxLength={80}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />

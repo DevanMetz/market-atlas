@@ -81,6 +81,13 @@ test('comparison presets, periods, chart modes and benchmarks are functional', a
   ).toBeVisible()
   await expect(page).toHaveURL(/period=3M&benchmark=QQQ/)
   await expect(page.locator('.chart-wrap .recharts-line')).toHaveCount(12)
+  await page.reload()
+  await expect(
+    page.getByRole('heading', { name: 'Performance vs QQQ', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Relative', exact: true }),
+  ).toHaveClass(/active/)
 })
 
 test('company-name search opens a stock and filters the research catalog', async ({
@@ -98,6 +105,8 @@ test('company-name search opens a stock and filters the research catalog', async
   await expect(page).toHaveURL(/stock=NVDA/)
   await page.reload()
   await expect(page.locator('.stock-detail')).toContainText('NVDA')
+  await expect(page.getByLabel('Filter stock list')).toHaveValue('NVDA')
+  await expect(page.locator('tbody tr')).toHaveCount(1)
 })
 
 test('watchlist persists on this device', async ({ page }) => {
@@ -450,10 +459,122 @@ test('a decline exactly at the filter boundary is included', async ({
   ).toContainText('Ongoing at end')
 })
 
-test('all navigation remains reachable on a short mobile screen', async ({page}) => {
-  await page.setViewportSize({width:390,height:568})
+test('all navigation remains reachable on a short mobile screen', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 568 })
   await page.goto('/?view=risk')
-  await page.getByRole('button',{name:'Open navigation',exact:true}).click()
-  await page.getByRole('navigation',{name:'Main navigation'}).getByRole('button',{name:/^Watchlist/}).click()
-  await expect(page.getByRole('heading',{name:'Watchlist.',exact:true})).toBeVisible()
+  await page
+    .getByRole('button', { name: 'Open navigation', exact: true })
+    .click()
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: /^Watchlist/ })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Watchlist.', exact: true }),
+  ).toBeVisible()
+})
+
+test('saved views restore full trend settings and can be removed', async ({
+  page,
+}) => {
+  await page.goto(
+    '/?view=trends&period=1Y&symbols=XLK,XLF&benchmark=QQQ&metric=beta&lookback=20&calendar=IAU&basis=relative',
+  )
+  await expect(page.getByLabel('Rolling measure')).toHaveValue('beta')
+  await expect(page.getByLabel('Rolling window')).toHaveValue('20')
+  await expect(page.getByLabel('Calendar asset')).toHaveValue('IAU')
+  await expect(page.locator('.month-calendar tbody tr')).toHaveCount(6)
+  await page.getByRole('button', { name: '3Y', exact: true }).click()
+  await page.getByLabel('Benchmark', { exact: true }).selectOption('SPY')
+  await expect(page).toHaveURL(/metric=beta/)
+  await expect(page).toHaveURL(/lookback=20/)
+  await page.locator('.saved-views summary').click()
+  await page.getByLabel('Saved view name').fill('Technology 20-day beta')
+  await page
+    .getByRole('button', { name: 'Save current view', exact: true })
+    .click()
+  await expect(page.locator('.saved-views-list li')).toHaveCount(1)
+  await page.goto('/?view=overview')
+  await page.locator('.saved-views summary').click()
+  await page.getByRole('link', { name: /Technology 20-day beta/ }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Trend lab.', exact: true }),
+  ).toBeVisible()
+  await expect(page.getByLabel('Rolling measure')).toHaveValue('beta')
+  await expect(page.getByLabel('Rolling window')).toHaveValue('20')
+  await expect(page.getByLabel('Calendar asset')).toHaveValue('IAU')
+  await expect(
+    page.getByRole('button', { name: 'vs SPY', exact: true }),
+  ).toHaveClass(/active/)
+  await expect(
+    page.getByRole('button', { name: '3Y', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'true')
+  await page.locator('.saved-views summary').click()
+  await page.getByLabel('Saved view name').fill('Renamed beta study')
+  await page
+    .getByRole('button', { name: 'Save current view', exact: true })
+    .click()
+  await expect(page.locator('.saved-views-list li')).toHaveCount(1)
+  const result = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .disableRules(['color-contrast'])
+    .analyze()
+  expect(
+    result.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    ),
+  ).toEqual([])
+  await page
+    .getByRole('button', {
+      name: 'Remove saved view Renamed beta study',
+      exact: true,
+    })
+    .click()
+  await expect(page.locator('.saved-views-list li')).toHaveCount(0)
+  await page.reload()
+  await page.locator('.saved-views summary').click()
+  await expect(page.locator('.saved-views-list li')).toHaveCount(0)
+})
+
+test('shared global-correlation and risk settings reload correctly', async ({
+  page,
+}) => {
+  await page.goto('/?view=correlations&period=1Y&universe=global')
+  await expect(
+    page.getByRole('button', { name: 'Global assets', exact: true }),
+  ).toHaveClass(/active/)
+  await expect(page.locator('.correlation-summary')).toContainText(
+    '9/9 histories loaded',
+  )
+  await page.getByRole('button', { name: '3M', exact: true }).click()
+  await page.reload()
+  await expect(
+    page.getByRole('button', { name: 'Global assets', exact: true }),
+  ).toHaveClass(/active/)
+  await page.goto('/?view=risk&symbols=XLK,XLF&asset=XLF&decline=10')
+  await expect(page.getByLabel('Minimum drawdown')).toHaveValue('10')
+  await expect(page.getByLabel('Drawdown asset')).toHaveValue('XLF')
+  await page.getByRole('button', { name: '1Y', exact: true }).click()
+  await expect(page).toHaveURL(/decline=10/)
+})
+
+test('invalid chart settings fall back to supported values and mobile saved views fit', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(
+    '/?view=trends&metric=invalid&lookback=0&calendar=../bad&basis=invalid',
+  )
+  await expect(page.getByLabel('Rolling measure')).toHaveValue('return')
+  await expect(page.getByLabel('Rolling window')).toHaveValue('60')
+  await expect(page.getByLabel('Calendar asset')).toHaveValue('XLK')
+  await page.locator('.saved-views summary').click()
+  await expect(page.getByLabel('Saved view name')).toBeVisible()
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390)
+  await page.getByLabel('Saved view name').press('Escape')
+  await expect(page.getByLabel('Saved view name')).not.toBeVisible()
 })

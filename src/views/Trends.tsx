@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Download } from 'lucide-react'
 import { asset, BENCHMARKS, COLORS, SECTORS } from '../lib/catalog'
 import { downloadCSV, num, pct, shortDate, windowKey } from '../lib/analytics'
@@ -7,6 +7,7 @@ import type { History, RollingMetric } from '../lib/types'
 import type { MarketContext } from '../lib/context'
 import { Change, Panel, Stat, SymbolChips } from '../components/UI'
 import { PerformanceChart } from '../components/Charts'
+import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
 
 const MONTHS = [
   'Jan',
@@ -49,12 +50,34 @@ const METRICS: { value: RollingMetric; name: string; description: string }[] = [
 ]
 
 export function TrendsView({ ctx }: { ctx: MarketContext }) {
-  const [metric, setMetric] = useState<RollingMetric>('return')
-  const [lookback, setLookback] = useState(60)
-  const [calendarSymbol, setCalendarSymbol] = useState(
-    ctx.selected[0] ?? ctx.benchmark,
+  const [metric, setMetric] = useQueryChoice(
+    'metric',
+    ['return', 'volatility', 'correlation', 'beta'] as const,
+    'return',
   )
-  const [relative, setRelative] = useState(false)
+  const [lookbackValue, setLookbackValue] = useQueryChoice(
+    'lookback',
+    ['20', '60', '120', '252'] as const,
+    '60',
+  )
+  const lookback = Number(lookbackValue)
+  const setLookback = (value: number) => setLookbackValue(String(value))
+  const [calendarSymbol, setCalendarSymbol] = useQuerySetting(
+    'calendar',
+    ctx.selected[0] ?? ctx.benchmark,
+    (value) => /^[A-Z0-9^][A-Z0-9.^=\-]{0,19}$/.test(value),
+  )
+  const [basis, setBasis] = useQueryChoice(
+    'basis',
+    ['absolute', 'relative'] as const,
+    'absolute',
+  )
+  const relative = basis === 'relative'
+  const setRelative = (value: boolean) =>
+    setBasis(value ? 'relative' : 'absolute')
+  useEffect(() => {
+    void ctx.load([calendarSymbol])
+  }, [calendarSymbol, ctx.load])
   const symbols = [...new Set([...ctx.selected, ctx.benchmark])]
   const histories = symbols
     .map((s) => ctx.data[s])
@@ -105,7 +128,6 @@ export function TrendsView({ ctx }: { ctx: MarketContext }) {
   ]
   const pickCalendar = (symbol: string) => {
     setCalendarSymbol(symbol)
-    void ctx.load([symbol])
   }
   return (
     <>
@@ -347,7 +369,16 @@ export function TrendsView({ ctx }: { ctx: MarketContext }) {
           <div className="inline-empty">
             {ctx.loading.includes(calendarSymbol)
               ? 'Loading monthly history…'
-              : 'No monthly history is available for this selection.'}
+              : (ctx.errors[calendarSymbol] ??
+                'No monthly history is available for this selection.')}
+            {ctx.errors[calendarSymbol] && (
+              <button
+                className="button"
+                onClick={() => void ctx.load([calendarSymbol], true)}
+              >
+                Retry calendar history
+              </button>
+            )}
           </div>
         )}
         <p className="panel-note">

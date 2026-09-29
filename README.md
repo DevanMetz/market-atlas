@@ -16,6 +16,7 @@ A public, responsive market-research workspace built with React, TypeScript, Rec
 - **Portfolio lab:** USD-only simulations with custom starting capital, buy and hold or monthly/quarterly/yearly rebalancing, final allocations, additive profit contributions, volatility, maximum drawdown and daily-return distributions. Search for assets beyond the catalog; export simulations and contributions.
 - **Watchlist:** device-local saved tickers, plus CSV exports and documented calculations.
 - **Research windows:** preset horizons or custom start/end dates, preserved in shareable URLs. Historical technical indicators stop at the selected end date; current quote cards remain current.
+- **Saved views:** up to 20 named research views stored on this device. Links preserve chart modes, rolling measures and windows, calendar assets, absolute/excess basis, drawdown filters, correlation universes, stock filters and table sorting. Portfolio settings and watchlists remain separate device settings; neither is included in shared URLs.
 
 ## Develop
 
@@ -72,7 +73,7 @@ Provider context: [exchange delays](https://help.yahoo.com/kb/SLN2310.html), [Ya
 
 ## Privacy and security
 
-No tracking SDKs, advertising, account database or user financial data are required. Watchlists and allocations are stored in localStorage. The Worker validates symbols and batch sizes, only calls fixed provider hosts, enforces request methods, bounds upstream timeouts and concurrency, and adds standard response headers. Only the intended `dist/` assets are public; repository and environment files are excluded. Operational Cloudflare logs may include request metadata.
+No tracking SDKs, advertising, account database or user financial data are required. Watchlists, portfolio settings and named research views are stored in localStorage. The Worker validates symbols and batch sizes, only calls fixed provider hosts, enforces request methods, bounds upstream timeouts and concurrency, and adds standard response headers. Only the intended `dist/` assets are public; repository and environment files are excluded. Operational Cloudflare logs may include request metadata.
 
 Research and education only. Not personalized investment advice. Historical results do not guarantee future performance.
 

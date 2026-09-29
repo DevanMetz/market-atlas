@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Download } from 'lucide-react'
 import { asset } from '../lib/catalog'
 import {
@@ -14,6 +14,7 @@ import type { MarketContext } from '../lib/context'
 import type { History } from '../lib/types'
 import { Change, Panel, Stat, SymbolChips } from '../components/UI'
 import { PerformanceChart } from '../components/Charts'
+import { useQueryChoice } from '../lib/viewSettings'
 
 export function RiskView({
   ctx,
@@ -24,7 +25,13 @@ export function RiskView({
   focus: string
   onFocus: (symbol: string) => void
 }) {
-  const [threshold, setThreshold] = useState(5)
+  const [thresholdValue, setThresholdValue] = useQueryChoice(
+    'decline',
+    ['0', '5', '10', '20'] as const,
+    '5',
+  )
+  const threshold = Number(thresholdValue)
+  const setThreshold = (value: number) => setThresholdValue(String(value))
   const symbols = [...new Set([...ctx.selected, ctx.benchmark])]
   const histories = symbols
     .map((s) => ctx.data[s])

@@ -35,6 +35,8 @@ import {
   windowLabel,
 } from './lib/analytics'
 import { useMarket } from './lib/useMarket'
+import { preserveViewSettings } from './lib/viewSettings'
+import { SavedViews } from './components/SavedViews'
 import type { DateRange, Period, View } from './lib/types'
 import type { MarketContext } from './lib/context'
 import {
@@ -93,8 +95,7 @@ const META: Record<View, { title: string; subtitle: string }> = {
   },
   risk: {
     title: 'Risk lab',
-    subtitle:
-      'Compare losses, recovery times, and historical daily returns.',
+    subtitle: 'Compare losses, recovery times, and historical daily returns.',
   },
   correlations: {
     title: 'Correlations',
@@ -194,6 +195,7 @@ export default function App() {
       query.set('start', dateRange.start)
       query.set('end', dateRange.end)
     }
+    preserveViewSettings(view, window.location.search, query)
     window.history.replaceState({}, '', `${window.location.pathname}?${query}`)
   }, [view, period, benchmark, selected, focus, riskFocus, dateRange])
   useEffect(() => {
@@ -287,7 +289,7 @@ export default function App() {
   const share = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href)
-      notify('View link copied. Your comparison and period are included.')
+      notify('View link copied with your symbols, dates and chart settings.')
     } catch {
       notify('Copy the current address from your browser to share this view.')
     }
@@ -438,7 +440,7 @@ export default function App() {
           </a>
           <div className="sidebar-status">
             <span>PUBLIC RESEARCH WORKSPACE</span>
-            <small>Market Atlas · v1.2</small>
+            <small>Market Atlas · v1.3</small>
           </div>
         </div>
       </aside>
@@ -489,6 +491,11 @@ export default function App() {
               <p>{META[view].subtitle}</p>
             </div>
             <div className="heading-actions">
+              <SavedViews
+                key={view}
+                defaultName={`${META[view].title} · ${analysisLabel}`}
+                notify={notify}
+              />
               <button
                 className="button"
                 aria-label="Share view"
@@ -583,8 +590,14 @@ export default function App() {
                     aria-label="Refresh market data"
                     onClick={() =>
                       void market.load(
-                        Object.keys(market.data).length
-                          ? Object.keys(market.data)
+                        Object.keys(market.data).length ||
+                          Object.keys(market.errors).length
+                          ? [
+                              ...new Set([
+                                ...Object.keys(market.data),
+                                ...Object.keys(market.errors),
+                              ]),
+                            ]
                           : [benchmark, ...SECTORS.map((s) => s.symbol)],
                         true,
                       )

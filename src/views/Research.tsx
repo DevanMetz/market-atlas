@@ -21,11 +21,17 @@ import { simulatePortfolio, validWeights } from '../lib/portfolio'
 import { Change, Empty, Panel, Stat, SymbolSearch } from '../components/UI'
 import { DistributionChart, PerformanceChart } from '../components/Charts'
 import { AssetTable } from './Stocks'
+import { useQueryChoice } from '../lib/viewSettings'
 
 export function Correlations({ ctx }: { ctx: MarketContext }) {
-  const [universe, setUniverse] = useState<'sectors' | 'global' | 'selection'>(
+  const [universe, setUniverse] = useQueryChoice(
+    'universe',
+    ['sectors', 'global', 'selection'] as const,
     'sectors',
   )
+  useEffect(() => {
+    if (universe === 'global') void ctx.load(GLOBAL.map((a) => a.symbol))
+  }, [universe, ctx.load])
   const symbols = [
     ...new Set([
       ctx.benchmark,
@@ -69,7 +75,6 @@ export function Correlations({ ctx }: { ctx: MarketContext }) {
                 className={u === universe ? 'active' : ''}
                 onClick={() => {
                   setUniverse(u)
-                  if (u === 'global') void ctx.load(GLOBAL.map((a) => a.symbol))
                 }}
               >
                 {u === 'sectors'

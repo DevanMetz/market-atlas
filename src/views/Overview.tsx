@@ -4,7 +4,7 @@ import {
   ChevronRight,
   Layers3,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useQueryChoice } from '../lib/viewSettings'
 import { asset, SECTORS } from '../lib/catalog'
 import {
   chartData,
@@ -71,7 +71,11 @@ export function SectorHeatmap({
 }
 
 export function Overview({ ctx }: { ctx: MarketContext }) {
-  const [mode, setMode] = useState<'return' | 'relative' | 'drawdown'>('return')
+  const [mode, setMode] = useQueryChoice(
+    'mode',
+    ['return', 'relative', 'drawdown'] as const,
+    'return',
+  )
   const series = [...new Set([...ctx.selected, ctx.benchmark])]
   const histories = series
     .map((s) => ctx.data[s])
@@ -298,7 +302,14 @@ export function Overview({ ctx }: { ctx: MarketContext }) {
 }
 
 export function SectorExplorer({ ctx }: { ctx: MarketContext }) {
-  const [relative, setRelative] = useState(false)
+  const [basis, setBasis] = useQueryChoice(
+    'basis',
+    ['absolute', 'relative'] as const,
+    'absolute',
+  )
+  const relative = basis === 'relative'
+  const setRelative = (value: boolean) =>
+    setBasis(value ? 'relative' : 'absolute')
   const end = typeof ctx.window === 'string' ? undefined : ctx.window.end
   const horizon = (period: Period): TimeWindow =>
     end ? { start: cutoff(period, end), end } : period
@@ -465,9 +476,11 @@ export function SectorExplorer({ ctx }: { ctx: MarketContext }) {
 }
 
 export function Comparison({ ctx }: { ctx: MarketContext }) {
-  const [mode, setMode] = useState<
-    'return' | 'relative' | 'drawdown' | 'growth'
-  >('return')
+  const [mode, setMode] = useQueryChoice(
+    'mode',
+    ['return', 'relative', 'drawdown', 'growth'] as const,
+    'return',
+  )
   const series = [...new Set([...ctx.selected, ctx.benchmark])]
   const histories = series
     .map((s) => ctx.data[s])
