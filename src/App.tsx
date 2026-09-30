@@ -14,6 +14,7 @@ import {
   Grid2X2,
   Layers3,
   Menu,
+  Newspaper,
   RefreshCw,
   TrendingUp,
   TrendingDown,
@@ -51,6 +52,7 @@ import { Comparison, Overview, SectorExplorer } from './views/Overview'
 import { StocksView } from './views/Stocks'
 import { TrendsView } from './views/Trends'
 import { RiskView } from './views/Risk'
+import { NewsView } from './views/News'
 import {
   Correlations,
   Methodology,
@@ -65,9 +67,10 @@ const NAV = [
   { id: 'stocks', name: 'Stock screener', icon: Search, tag: '04' },
   { id: 'trends', name: 'Trend lab', icon: TrendingUp, tag: '05' },
   { id: 'risk', name: 'Risk lab', icon: TrendingDown, tag: '06' },
-  { id: 'correlations', name: 'Correlations', icon: Activity, tag: '07' },
-  { id: 'portfolio', name: 'Portfolio lab', icon: Wallet, tag: '08' },
-  { id: 'watchlist', name: 'Watchlist', icon: Star, tag: '09' },
+  { id: 'news', name: 'News & sentiment', icon: Newspaper, tag: '07' },
+  { id: 'correlations', name: 'Correlations', icon: Activity, tag: '08' },
+  { id: 'portfolio', name: 'Portfolio lab', icon: Wallet, tag: '09' },
+  { id: 'watchlist', name: 'Watchlist', icon: Star, tag: '10' },
 ] as const
 const META: Record<View, { title: string; subtitle: string }> = {
   overview: {
@@ -96,6 +99,11 @@ const META: Record<View, { title: string; subtitle: string }> = {
   risk: {
     title: 'Risk lab',
     subtitle: 'Compare losses, recovery times, and historical daily returns.',
+  },
+  news: {
+    title: 'News & sentiment',
+    subtitle:
+      'Connect the headlines. Explore the language behind the market conversation.',
   },
   correlations: {
     title: 'Correlations',
@@ -208,11 +216,12 @@ export default function App() {
     }
   }, [watchlist, notify])
   useEffect(() => {
-    void market.load([...SECTORS, ...BENCHMARKS].map((a) => a.symbol))
-  }, [market.load])
+    if (view !== 'news')
+      void market.load([...SECTORS, ...BENCHMARKS].map((a) => a.symbol))
+  }, [market.load, view])
   useEffect(() => {
-    void market.load([...selected, benchmark])
-  }, [selected, benchmark, market.load])
+    if (view !== 'news') void market.load([...selected, benchmark])
+  }, [selected, benchmark, market.load, view])
   useEffect(() => {
     if (view === 'stocks')
       void market.load([focus, ...STOCKS.map((a) => a.symbol)])
@@ -440,7 +449,7 @@ export default function App() {
           </a>
           <div className="sidebar-status">
             <span>PUBLIC RESEARCH WORKSPACE</span>
-            <small>Market Atlas · v1.3</small>
+            <small>Market Atlas · v1.5</small>
           </div>
         </div>
       </aside>
@@ -466,9 +475,11 @@ export default function App() {
                   market.loading.length ? 'status-dot loading' : 'status-dot'
                 }
               />
-              {market.loading.length
-                ? 'Loading market data'
-                : 'Daily market data'}
+              {view === 'news'
+                ? 'Publisher headlines'
+                : market.loading.length
+                  ? 'Loading market data'
+                  : 'Daily market data'}
             </span>
             <button
               className="icon-button"
@@ -493,7 +504,11 @@ export default function App() {
             <div className="heading-actions">
               <SavedViews
                 key={view}
-                defaultName={`${META[view].title} · ${analysisLabel}`}
+                defaultName={
+                  view === 'news'
+                    ? 'News research'
+                    : `${META[view].title} · ${analysisLabel}`
+                }
                 notify={notify}
               />
               <button
@@ -510,6 +525,7 @@ export default function App() {
                 'correlations',
                 'trends',
                 'risk',
+                'news',
               ].includes(view) && (
                 <button
                   className="button"
@@ -522,7 +538,7 @@ export default function App() {
               )}
             </div>
           </div>
-          {view !== 'methodology' && (
+          {view !== 'methodology' && view !== 'news' && (
             <>
               <div className="benchmark-cards">
                 {BENCHMARKS.map((b) => {
@@ -652,6 +668,7 @@ export default function App() {
           {view === 'sectors' && <SectorExplorer ctx={ctx} />}
           {view === 'compare' && <Comparison ctx={ctx} />}
           {view === 'trends' && <TrendsView ctx={ctx} />}
+          {view === 'news' && <NewsView notify={notify} onStock={openStock} />}
           {view === 'risk' && (
             <RiskView ctx={ctx} focus={riskFocus} onFocus={setFocus} />
           )}
@@ -672,15 +689,23 @@ export default function App() {
               <span>Independent market research</span>
             </div>
             <span>
-              {latest ? `Latest daily observation ${shortDate(latest)} · ` : ''}
-              <a
-                href="https://finance.yahoo.com/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Yahoo Finance
-              </a>{' '}
-              · Data may be delayed
+              {view === 'news' ? (
+                'Headlines link to their original publishers'
+              ) : (
+                <>
+                  {latest
+                    ? `Latest daily observation ${shortDate(latest)} · `
+                    : ''}
+                  <a
+                    href="https://finance.yahoo.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Yahoo Finance
+                  </a>{' '}
+                  · Data may be delayed
+                </>
+              )}
             </span>
             <button onClick={() => navigate('methodology')}>
               Sources & calculations <ArrowUpRight size={12} />

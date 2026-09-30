@@ -52,6 +52,7 @@ export function AssetTable({
   const ordered = rows.sort((a, b) => {
     const av = a[sort],
       bv = b[sort]
+    if (av == null && bv == null) return 0
     if (av == null) return 1
     if (bv == null) return -1
     return (
@@ -79,6 +80,8 @@ export function AssetTable({
       <ArrowDownUp size={12} />
     </button>
   )
+  const sortDirection = (key: Sort) =>
+    sort === key ? (asc ? 'ascending' : 'descending') : undefined
   if (!assets.length)
     return (
       <Empty title={emptyTitle}>
@@ -87,18 +90,35 @@ export function AssetTable({
     )
   return (
     <>
-      <div className="table-scroll">
+      <div
+        className="table-scroll"
+        tabIndex={0}
+        role="region"
+        aria-label="Stock and ETF metrics table"
+      >
         <table>
           <thead>
             <tr>
               <th />
-              <th>{heading('Asset', 'symbol')}</th>
-              <th className="right">{heading('Price', 'price')}</th>
-              <th className="right">{heading('1D', 'day')}</th>
-              <th className="right">{heading(ctx.windowLabel, 'change')}</th>
+              <th aria-sort={sortDirection('symbol')}>
+                {heading('Asset', 'symbol')}
+              </th>
+              <th className="right" aria-sort={sortDirection('price')}>
+                {heading('Price', 'price')}
+              </th>
+              <th className="right" aria-sort={sortDirection('day')}>
+                {heading('1D', 'day')}
+              </th>
+              <th className="right" aria-sort={sortDirection('change')}>
+                {heading(ctx.windowLabel, 'change')}
+              </th>
               <th className="right">vs {ctx.benchmark}</th>
-              <th className="right">{heading('Volatility', 'volatility')}</th>
-              <th className="right">{heading('RSI 14', 'rsi')}</th>
+              <th className="right" aria-sort={sortDirection('volatility')}>
+                {heading('Volatility', 'volatility')}
+              </th>
+              <th className="right" aria-sort={sortDirection('rsi')}>
+                {heading('RSI 14', 'rsi')}
+              </th>
               <th>Trend · 40 sessions</th>
             </tr>
           </thead>

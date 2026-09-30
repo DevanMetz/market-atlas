@@ -225,7 +225,12 @@ export function Overview({ ctx }: { ctx: MarketContext }) {
           </span>
         }
       >
-        <div className="table-scroll">
+        <div
+          className="table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="Sector leaderboard table"
+        >
           <table>
             <thead>
               <tr>
@@ -418,7 +423,12 @@ export function SectorExplorer({ ctx }: { ctx: MarketContext }) {
         title="Performance across time"
         action={<span className="small muted">Click a sector to compare</span>}
       >
-        <div className="table-scroll">
+        <div
+          className="table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="Sector performance across time"
+        >
           <table className="matrix-table">
             <thead>
               <tr>
@@ -578,7 +588,12 @@ export function Comparison({ ctx }: { ctx: MarketContext }) {
         </div>
       </Panel>
       <Panel title="Beyond the return">
-        <div className="table-scroll">
+        <div
+          className="table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="Asset return and risk metrics"
+        >
           <table>
             <thead>
               <tr>

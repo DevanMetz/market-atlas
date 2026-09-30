@@ -1,4 +1,5 @@
 import type { History, PricePoint } from '../src/lib/types'
+import { newsResponse, parseNewsSources } from './news'
 
 type Env = {
   ASSETS: Fetcher
@@ -197,6 +198,15 @@ export default {
           429,
           { 'Retry-After': '60' },
         )
+    }
+    if (url.pathname === '/api/news') {
+      let ids: string[]
+      try {
+        ids = parseNewsSources(url.searchParams.get('sources'))
+      } catch (error) {
+        return json({ error: (error as Error).message }, 400)
+      }
+      return json(await newsResponse(ids, request, ctx))
     }
     if (url.pathname === '/api/history') {
       let symbols: string[]

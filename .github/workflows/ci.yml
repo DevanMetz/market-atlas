@@ -15,15 +15,24 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm test -- --maxWorkers=1
       - run: npm run build
+      - name: Bundle Worker for deployment
+        run: npx wrangler deploy --dry-run --outdir compiled-worker
       - run: npx playwright install --with-deps chromium
       - name: Browser checks
         run: |
           npx vite preview --host 127.0.0.1 --port 8795 &
-          npx playwright test
+          npx playwright test --workers=1
         env:
           PLAYWRIGHT_CHANNEL: chromium
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: |
+            dist/
+            compiled-worker/
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

@@ -1,5 +1,7 @@
 node_modules/
 dist/
+compiled-worker/
+news-feed-audit.json
 .wrangler/
 .dev.vars*
 .env*

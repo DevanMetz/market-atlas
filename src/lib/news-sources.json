@@ -1,0 +1,1130 @@
+[
+  {
+    "id": "cnbc",
+    "name": "CNBC",
+    "url": "https://www.cnbc.com/markets/",
+    "category": "Markets",
+    "region": "US",
+    "feed": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "yahoo",
+    "name": "Yahoo Finance",
+    "url": "https://finance.yahoo.com/",
+    "category": "Markets",
+    "region": "US",
+    "feed": "https://finance.yahoo.com/news/rssindex",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "marketwatch",
+    "name": "MarketWatch",
+    "url": "https://www.marketwatch.com/",
+    "category": "Markets",
+    "region": "US",
+    "feed": "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "wsj",
+    "name": "The Wall Street Journal",
+    "url": "https://www.wsj.com/finance",
+    "category": "Markets",
+    "region": "US",
+    "feed": "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "bloomberg",
+    "name": "Bloomberg",
+    "url": "https://www.bloomberg.com/markets",
+    "category": "Markets",
+    "region": "Global",
+    "feed": "https://www.bloomberg.com/feeds/markets/news.rss",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "ft",
+    "name": "Financial Times",
+    "url": "https://www.ft.com/markets",
+    "category": "Markets",
+    "region": "UK",
+    "feed": "https://www.ft.com/markets?format=rss",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "reuters",
+    "name": "Reuters",
+    "url": "https://www.reuters.com/markets/",
+    "category": "Markets",
+    "region": "Global"
+  },
+  {
+    "id": "ap",
+    "name": "Associated Press",
+    "url": "https://apnews.com/hub/business",
+    "category": "Economy",
+    "region": "US"
+  },
+  {
+    "id": "bbc",
+    "name": "BBC News · Business",
+    "url": "https://www.bbc.com/news/business",
+    "category": "Economy",
+    "region": "UK",
+    "feed": "https://feeds.bbci.co.uk/news/business/rss.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "nyt",
+    "name": "The New York Times · Business",
+    "url": "https://www.nytimes.com/section/business",
+    "category": "Economy",
+    "region": "US",
+    "feed": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "npr",
+    "name": "NPR · Business",
+    "url": "https://www.npr.org/sections/business/",
+    "category": "Economy",
+    "region": "US",
+    "feed": "https://feeds.npr.org/1006/rss.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "sky",
+    "name": "Sky News · Business",
+    "url": "https://news.sky.com/business",
+    "category": "Economy",
+    "region": "UK",
+    "feed": "https://feeds.skynews.com/feeds/rss/business.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "guardian",
+    "name": "The Guardian · Business",
+    "url": "https://www.theguardian.com/business",
+    "category": "Economy",
+    "region": "UK",
+    "note": "Publisher restricts RSS to personal, noncommercial readers.",
+    "reference": "https://help.theguardian.com/article/how-do-i-use-the-guardian-s-rss-feeds"
+  },
+  {
+    "id": "cnn",
+    "name": "CNN Business",
+    "url": "https://www.cnn.com/business",
+    "category": "Markets",
+    "region": "US"
+  },
+  {
+    "id": "foxbusiness",
+    "name": "Fox Business",
+    "url": "https://www.foxbusiness.com/",
+    "category": "Markets",
+    "region": "US"
+  },
+  {
+    "id": "abc",
+    "name": "ABC News · Business",
+    "url": "https://www.abc.net.au/news/business/",
+    "category": "Economy",
+    "region": "Australia",
+    "feed": "https://www.abc.net.au/news/feed/51892/rss.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "cbc",
+    "name": "CBC News · Business",
+    "url": "https://www.cbc.ca/news/business",
+    "category": "Economy",
+    "region": "Canada",
+    "feed": "https://www.cbc.ca/webfeed/rss/rss-business",
+    "feedEnabled": false,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "dw",
+    "name": "Deutsche Welle · Business",
+    "url": "https://www.dw.com/en/business/s-1431",
+    "category": "Economy",
+    "region": "Europe",
+    "feed": "https://rss.dw.com/rdf/rss-en-bus",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "france24",
+    "name": "France 24 · Business",
+    "url": "https://www.france24.com/en/business/",
+    "category": "Economy",
+    "region": "Europe",
+    "feed": "https://www.france24.com/en/business-tech/rss",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "cna",
+    "name": "CNA · Business",
+    "url": "https://www.channelnewsasia.com/business",
+    "category": "Markets",
+    "region": "Asia",
+    "feed": "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6936",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "scmp",
+    "name": "South China Morning Post · Business",
+    "url": "https://www.scmp.com/business",
+    "category": "Markets",
+    "region": "Asia",
+    "feed": "https://www.scmp.com/rss/92/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "nikkei",
+    "name": "Nikkei Asia",
+    "url": "https://asia.nikkei.com/",
+    "category": "Markets",
+    "region": "Asia",
+    "feed": "https://asia.nikkei.com/rss/feed/nar",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "japantimes",
+    "name": "The Japan Times · Business",
+    "url": "https://www.japantimes.co.jp/business/",
+    "category": "Markets",
+    "region": "Asia",
+    "feed": "https://www.japantimes.co.jp/business/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "caixin",
+    "name": "Caixin Global",
+    "url": "https://www.caixinglobal.com/",
+    "category": "Markets",
+    "region": "Asia"
+  },
+  {
+    "id": "koreaherald",
+    "name": "The Korea Herald",
+    "url": "https://www.koreaherald.com/",
+    "category": "Markets",
+    "region": "Asia"
+  },
+  {
+    "id": "straitstimes",
+    "name": "The Straits Times · Business",
+    "url": "https://www.straitstimes.com/business",
+    "category": "Markets",
+    "region": "Asia"
+  },
+  {
+    "id": "businesstimes",
+    "name": "The Business Times",
+    "url": "https://www.businesstimes.com.sg/",
+    "category": "Markets",
+    "region": "Asia"
+  },
+  {
+    "id": "benzinga",
+    "name": "Benzinga",
+    "url": "https://www.benzinga.com/",
+    "category": "Markets",
+    "region": "US",
+    "feed": "https://www.benzinga.com/feed",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "thestreet",
+    "name": "TheStreet",
+    "url": "https://www.thestreet.com/",
+    "category": "Markets",
+    "region": "US",
+    "feed": "https://www.thestreet.com/.rss/feed/a4a58455-5a41-4dfa-899c-86c49b653ed8.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "ibd",
+    "name": "Investor’s Business Daily",
+    "url": "https://www.investors.com/",
+    "category": "Investing",
+    "region": "US",
+    "feed": "https://www.investors.com/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "nasdaq",
+    "name": "Nasdaq · Market Activity",
+    "url": "https://www.nasdaq.com/news-and-insights",
+    "category": "Markets",
+    "region": "US",
+    "feed": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+    "feedEnabled": false,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "seekingalpha",
+    "name": "Seeking Alpha",
+    "url": "https://seekingalpha.com/market-news",
+    "category": "Investing",
+    "region": "US",
+    "feed": "https://seekingalpha.com/market_currents.xml",
+    "reference": "https://about.seekingalpha.com/feeds",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "motleyfool",
+    "name": "The Motley Fool",
+    "url": "https://www.fool.com/",
+    "category": "Investing",
+    "region": "US",
+    "feed": "https://www.fool.com/a/feeds/foolwatch?apikey=foolwatch-feed",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "zacks",
+    "name": "Zacks Investment Research",
+    "url": "https://www.zacks.com/stock/news",
+    "category": "Investing",
+    "region": "US",
+    "feed": "https://www.zacks.com/stock/news/rss",
+    "feedEnabled": false,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "morningstar",
+    "name": "Morningstar",
+    "url": "https://www.morningstar.com/",
+    "category": "Investing",
+    "region": "US"
+  },
+  {
+    "id": "barrons",
+    "name": "Barron’s",
+    "url": "https://www.barrons.com/",
+    "category": "Investing",
+    "region": "US"
+  },
+  {
+    "id": "investopedia",
+    "name": "Investopedia",
+    "url": "https://www.investopedia.com/",
+    "category": "Investing",
+    "region": "US"
+  },
+  {
+    "id": "investing",
+    "name": "Investing.com",
+    "url": "https://www.investing.com/news/",
+    "category": "Markets",
+    "region": "Global",
+    "note": "On-site news display requires a publisher arrangement.",
+    "reference": "https://www.investing.com/webmaster-tools/real-time-news-feed"
+  },
+  {
+    "id": "etftrends",
+    "name": "ETF Trends",
+    "url": "https://www.etftrends.com/",
+    "category": "ETFs",
+    "region": "US",
+    "feed": "https://www.etftrends.com/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "etfdb",
+    "name": "ETF Database",
+    "url": "https://etfdb.com/",
+    "category": "ETFs",
+    "region": "US",
+    "feed": "https://etfdb.com/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "etfcom",
+    "name": "ETF.com",
+    "url": "https://www.etf.com/",
+    "category": "ETFs",
+    "region": "US"
+  },
+  {
+    "id": "etfstream",
+    "name": "ETF Stream",
+    "url": "https://www.etfstream.com/",
+    "category": "ETFs",
+    "region": "Europe"
+  },
+  {
+    "id": "pionline",
+    "name": "Pensions & Investments",
+    "url": "https://www.pionline.com/",
+    "category": "Investing",
+    "region": "US"
+  },
+  {
+    "id": "institutionalinvestor",
+    "name": "Institutional Investor",
+    "url": "https://www.institutionalinvestor.com/",
+    "category": "Investing",
+    "region": "Global"
+  },
+  {
+    "id": "techcrunch",
+    "name": "TechCrunch",
+    "url": "https://techcrunch.com/",
+    "category": "Technology",
+    "region": "US",
+    "feed": "https://techcrunch.com/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-29"
+  },
+  {
+    "id": "arstechnica",
+    "name": "Ars Technica",
+    "url": "https://arstechnica.com/",
+    "category": "Technology",
+    "region": "US",
+    "feed": "https://feeds.arstechnica.com/arstechnica/index/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "theverge",
+    "name": "The Verge",
+    "url": "https://www.theverge.com/",
+    "category": "Technology",
+    "region": "US",
+    "feed": "https://www.theverge.com/rss/index.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "venturebeat",
+    "name": "VentureBeat",
+    "url": "https://venturebeat.com/",
+    "category": "Technology",
+    "region": "US",
+    "feed": "https://venturebeat.com/feed/",
+    "feedEnabled": false,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "semiengineering",
+    "name": "Semiconductor Engineering",
+    "url": "https://semiengineering.com/",
+    "category": "Technology",
+    "region": "US",
+    "feed": "https://semiengineering.com/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "theinformation",
+    "name": "The Information",
+    "url": "https://www.theinformation.com/",
+    "category": "Technology",
+    "region": "US"
+  },
+  {
+    "id": "wired",
+    "name": "WIRED",
+    "url": "https://www.wired.com/",
+    "category": "Technology",
+    "region": "US"
+  },
+  {
+    "id": "mittechreview",
+    "name": "MIT Technology Review",
+    "url": "https://www.technologyreview.com/",
+    "category": "Technology",
+    "region": "US"
+  },
+  {
+    "id": "fiercebiotech",
+    "name": "Fierce Biotech",
+    "url": "https://www.fiercebiotech.com/",
+    "category": "Healthcare",
+    "region": "US",
+    "feed": "https://www.fiercebiotech.com/rss/xml",
+    "feedEnabled": false,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "fiercepharma",
+    "name": "Fierce Pharma",
+    "url": "https://www.fiercepharma.com/",
+    "category": "Healthcare",
+    "region": "US",
+    "feed": "https://www.fiercepharma.com/rss/xml",
+    "feedEnabled": false,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "biopharmadive",
+    "name": "BioPharma Dive",
+    "url": "https://www.biopharmadive.com/",
+    "category": "Healthcare",
+    "region": "US",
+    "feed": "https://www.biopharmadive.com/feeds/news/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "stat",
+    "name": "STAT",
+    "url": "https://www.statnews.com/",
+    "category": "Healthcare",
+    "region": "US"
+  },
+  {
+    "id": "endpoints",
+    "name": "Endpoints News",
+    "url": "https://endpts.com/",
+    "category": "Healthcare",
+    "region": "US"
+  },
+  {
+    "id": "healthcaredive",
+    "name": "Healthcare Dive",
+    "url": "https://www.healthcaredive.com/",
+    "category": "Healthcare",
+    "region": "US",
+    "feed": "https://www.healthcaredive.com/feeds/news/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "utilitydive",
+    "name": "Utility Dive",
+    "url": "https://www.utilitydive.com/",
+    "category": "Energy",
+    "region": "US",
+    "feed": "https://www.utilitydive.com/feeds/news/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "retaildive",
+    "name": "Retail Dive",
+    "url": "https://www.retaildive.com/",
+    "category": "Consumer",
+    "region": "US",
+    "feed": "https://www.retaildive.com/feeds/news/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "bankingdive",
+    "name": "Banking Dive",
+    "url": "https://www.bankingdive.com/",
+    "category": "Financials",
+    "region": "US",
+    "feed": "https://www.bankingdive.com/feeds/news/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "manufacturingdive",
+    "name": "Manufacturing Dive",
+    "url": "https://www.manufacturingdive.com/",
+    "category": "Industrials",
+    "region": "US",
+    "feed": "https://www.manufacturingdive.com/feeds/news/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "supplychaindive",
+    "name": "Supply Chain Dive",
+    "url": "https://www.supplychaindive.com/",
+    "category": "Industrials",
+    "region": "US",
+    "feed": "https://www.supplychaindive.com/feeds/news/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "constructiondive",
+    "name": "Construction Dive",
+    "url": "https://www.constructiondive.com/",
+    "category": "Real estate",
+    "region": "US",
+    "feed": "https://www.constructiondive.com/feeds/news/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "oilprice",
+    "name": "OilPrice.com",
+    "url": "https://oilprice.com/",
+    "category": "Energy",
+    "region": "Global",
+    "feed": "https://oilprice.com/rss/main",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "rigzone",
+    "name": "Rigzone",
+    "url": "https://www.rigzone.com/news/",
+    "category": "Energy",
+    "region": "Global",
+    "feed": "https://www.rigzone.com/news/rss/rigzone_latest.aspx",
+    "feedEnabled": false,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "spglobal",
+    "name": "S&P Global · Commodity Insights",
+    "url": "https://www.spglobal.com/commodityinsights/",
+    "category": "Energy",
+    "region": "Global"
+  },
+  {
+    "id": "mining",
+    "name": "MINING.com",
+    "url": "https://www.mining.com/",
+    "category": "Materials",
+    "region": "Global",
+    "feed": "https://www.mining.com/feed/",
+    "feedEnabled": false,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "kitco",
+    "name": "Kitco News",
+    "url": "https://www.kitco.com/news/",
+    "category": "Materials",
+    "region": "Canada"
+  },
+  {
+    "id": "fastmarkets",
+    "name": "Fastmarkets",
+    "url": "https://www.fastmarkets.com/",
+    "category": "Materials",
+    "region": "Global"
+  },
+  {
+    "id": "coindesk",
+    "name": "CoinDesk",
+    "url": "https://www.coindesk.com/",
+    "category": "Crypto",
+    "region": "Global",
+    "feed": "https://www.coindesk.com/arc/outboundfeeds/rss",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "cointelegraph",
+    "name": "Cointelegraph",
+    "url": "https://cointelegraph.com/",
+    "category": "Crypto",
+    "region": "Global",
+    "feed": "https://cointelegraph.com/rss",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "decrypt",
+    "name": "Decrypt",
+    "url": "https://decrypt.co/",
+    "category": "Crypto",
+    "region": "Global",
+    "feed": "https://decrypt.co/feed",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "theblock",
+    "name": "The Block",
+    "url": "https://www.theblock.co/",
+    "category": "Crypto",
+    "region": "Global",
+    "feed": "https://www.theblock.co/rss.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "fed",
+    "name": "Federal Reserve Board",
+    "url": "https://www.federalreserve.gov/newsevents.htm",
+    "category": "Official",
+    "region": "US",
+    "feed": "https://www.federalreserve.gov/feeds/press_all.xml",
+    "reference": "https://www.federalreserve.gov/feeds/feeds.htm",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "sec",
+    "name": "U.S. Securities and Exchange Commission",
+    "url": "https://www.sec.gov/newsroom",
+    "category": "Official",
+    "region": "US",
+    "feed": "https://www.sec.gov/news/pressreleases.rss",
+    "reference": "https://www.sec.gov/about/rss-feeds",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "ecb",
+    "name": "European Central Bank",
+    "url": "https://www.ecb.europa.eu/press/html/index.en.html",
+    "category": "Official",
+    "region": "Europe",
+    "feed": "https://www.ecb.europa.eu/rss/press.html",
+    "reference": "https://www.ecb.europa.eu/home/html/rss.en.html",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "boe",
+    "name": "Bank of England",
+    "url": "https://www.bankofengland.co.uk/news",
+    "category": "Official",
+    "region": "UK",
+    "feed": "https://www.bankofengland.co.uk/rss/news",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "boc",
+    "name": "Bank of Canada",
+    "url": "https://www.bankofcanada.ca/press/",
+    "category": "Official",
+    "region": "Canada",
+    "feed": "https://www.bankofcanada.ca/content_type/press-releases/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "rba",
+    "name": "Reserve Bank of Australia",
+    "url": "https://www.rba.gov.au/media-releases/",
+    "category": "Official",
+    "region": "Australia",
+    "feed": "https://www.rba.gov.au/rss/rss-cb-media-releases.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "bea",
+    "name": "U.S. Bureau of Economic Analysis",
+    "url": "https://www.bea.gov/news",
+    "category": "Official",
+    "region": "US",
+    "feed": "https://apps.bea.gov/rss/rss.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "bls",
+    "name": "U.S. Bureau of Labor Statistics",
+    "url": "https://www.bls.gov/bls/newsrels.htm",
+    "category": "Official",
+    "region": "US",
+    "feed": "https://www.bls.gov/feed/bls_latest.rss",
+    "feedEnabled": false,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "eia",
+    "name": "U.S. Energy Information Administration",
+    "url": "https://www.eia.gov/todayinenergy/",
+    "category": "Official",
+    "region": "US",
+    "feed": "https://www.eia.gov/rss/todayinenergy.xml",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "treasury",
+    "name": "U.S. Treasury",
+    "url": "https://home.treasury.gov/news/press-releases",
+    "category": "Official",
+    "region": "US"
+  },
+  {
+    "id": "cftc",
+    "name": "Commodity Futures Trading Commission",
+    "url": "https://www.cftc.gov/PressRoom/PressReleases",
+    "category": "Official",
+    "region": "US"
+  },
+  {
+    "id": "fdic",
+    "name": "Federal Deposit Insurance Corporation",
+    "url": "https://www.fdic.gov/news/press-releases",
+    "category": "Official",
+    "region": "US"
+  },
+  {
+    "id": "imf",
+    "name": "International Monetary Fund",
+    "url": "https://www.imf.org/en/News",
+    "category": "Official",
+    "region": "Global"
+  },
+  {
+    "id": "worldbank",
+    "name": "World Bank",
+    "url": "https://www.worldbank.org/en/news",
+    "category": "Official",
+    "region": "Global"
+  },
+  {
+    "id": "bis",
+    "name": "Bank for International Settlements",
+    "url": "https://www.bis.org/press/index.htm",
+    "category": "Official",
+    "region": "Global"
+  },
+  {
+    "id": "oecd",
+    "name": "OECD",
+    "url": "https://www.oecd.org/",
+    "category": "Official",
+    "region": "Global"
+  },
+  {
+    "id": "financialpost",
+    "name": "Financial Post",
+    "url": "https://financialpost.com/",
+    "category": "Markets",
+    "region": "Canada",
+    "feed": "https://financialpost.com/feed",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "bnnbloomberg",
+    "name": "BNN Bloomberg",
+    "url": "https://www.bnnbloomberg.ca/",
+    "category": "Markets",
+    "region": "Canada"
+  },
+  {
+    "id": "globeandmail",
+    "name": "The Globe and Mail · Business",
+    "url": "https://www.theglobeandmail.com/business/",
+    "category": "Markets",
+    "region": "Canada"
+  },
+  {
+    "id": "afr",
+    "name": "Australian Financial Review",
+    "url": "https://www.afr.com/",
+    "category": "Markets",
+    "region": "Australia"
+  },
+  {
+    "id": "stockhead",
+    "name": "Stockhead",
+    "url": "https://stockhead.com.au/",
+    "category": "Markets",
+    "region": "Australia"
+  },
+  {
+    "id": "moneyweb",
+    "name": "Moneyweb",
+    "url": "https://www.moneyweb.co.za/",
+    "category": "Markets",
+    "region": "Africa",
+    "feed": "https://www.moneyweb.co.za/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "businessday",
+    "name": "Business Day",
+    "url": "https://www.businesslive.co.za/bd/",
+    "category": "Markets",
+    "region": "Africa"
+  },
+  {
+    "id": "businessmaverick",
+    "name": "Business Maverick",
+    "url": "https://www.dailymaverick.co.za/section/business-maverick/",
+    "category": "Markets",
+    "region": "Africa"
+  },
+  {
+    "id": "cityam",
+    "name": "City A.M.",
+    "url": "https://www.cityam.com/",
+    "category": "Markets",
+    "region": "UK",
+    "feed": "https://www.cityam.com/feed/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "thisismoney",
+    "name": "This is Money",
+    "url": "https://www.thisismoney.co.uk/money/markets/",
+    "category": "Investing",
+    "region": "UK"
+  },
+  {
+    "id": "moneyweek",
+    "name": "MoneyWeek",
+    "url": "https://moneyweek.com/",
+    "category": "Investing",
+    "region": "UK"
+  },
+  {
+    "id": "ii",
+    "name": "Interactive Investor",
+    "url": "https://www.ii.co.uk/analysis-commentary",
+    "category": "Investing",
+    "region": "UK"
+  },
+  {
+    "id": "businessinsider",
+    "name": "Business Insider",
+    "url": "https://www.businessinsider.com/",
+    "category": "Markets",
+    "region": "US",
+    "feed": "https://feeds.businessinsider.com/custom/all",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "fortune",
+    "name": "Fortune",
+    "url": "https://fortune.com/",
+    "category": "Markets",
+    "region": "US",
+    "feed": "https://fortune.com/feed/fortune-feeds/?id=3230629",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "forbes",
+    "name": "Forbes",
+    "url": "https://www.forbes.com/money/",
+    "category": "Investing",
+    "region": "US"
+  },
+  {
+    "id": "fastcompany",
+    "name": "Fast Company",
+    "url": "https://www.fastcompany.com/",
+    "category": "Technology",
+    "region": "US"
+  },
+  {
+    "id": "quartz",
+    "name": "Quartz",
+    "url": "https://qz.com/",
+    "category": "Economy",
+    "region": "US"
+  },
+  {
+    "id": "economist",
+    "name": "The Economist",
+    "url": "https://www.economist.com/finance-and-economics",
+    "category": "Economy",
+    "region": "Global"
+  },
+  {
+    "id": "marketplace",
+    "name": "Marketplace",
+    "url": "https://www.marketplace.org/",
+    "category": "Economy",
+    "region": "US"
+  },
+  {
+    "id": "axios",
+    "name": "Axios · Markets",
+    "url": "https://www.axios.com/markets",
+    "category": "Markets",
+    "region": "US"
+  },
+  {
+    "id": "economic-times",
+    "name": "The Economic Times",
+    "url": "https://economictimes.indiatimes.com/markets",
+    "category": "Markets",
+    "region": "India",
+    "note": "Publisher restricts public RSS aggregation.",
+    "reference": "https://economictimes.indiatimes.com/rss.cms"
+  },
+  {
+    "id": "mint",
+    "name": "Mint",
+    "url": "https://www.livemint.com/market",
+    "category": "Markets",
+    "region": "India",
+    "note": "Publisher restricts RSS to personal, noncommercial readers.",
+    "reference": "https://www.livemint.com/rss"
+  },
+  {
+    "id": "moneycontrol",
+    "name": "Moneycontrol",
+    "url": "https://www.moneycontrol.com/news/business/markets/",
+    "category": "Markets",
+    "region": "India"
+  },
+  {
+    "id": "businessstandard",
+    "name": "Business Standard",
+    "url": "https://www.business-standard.com/markets",
+    "category": "Markets",
+    "region": "India"
+  },
+  {
+    "id": "businessline",
+    "name": "The Hindu BusinessLine",
+    "url": "https://www.thehindubusinessline.com/markets/",
+    "category": "Markets",
+    "region": "India"
+  },
+  {
+    "id": "financialexpress",
+    "name": "Financial Express",
+    "url": "https://www.financialexpress.com/market/",
+    "category": "Markets",
+    "region": "India"
+  },
+  {
+    "id": "cnbctv18",
+    "name": "CNBC-TV18",
+    "url": "https://www.cnbctv18.com/market/",
+    "category": "Markets",
+    "region": "India"
+  },
+  {
+    "id": "housingwire",
+    "name": "HousingWire",
+    "url": "https://www.housingwire.com/",
+    "category": "Real estate",
+    "region": "US"
+  },
+  {
+    "id": "therealdeal",
+    "name": "The Real Deal",
+    "url": "https://therealdeal.com/",
+    "category": "Real estate",
+    "region": "US"
+  },
+  {
+    "id": "commercialobserver",
+    "name": "Commercial Observer",
+    "url": "https://commercialobserver.com/",
+    "category": "Real estate",
+    "region": "US"
+  },
+  {
+    "id": "americanbanker",
+    "name": "American Banker",
+    "url": "https://www.americanbanker.com/",
+    "category": "Financials",
+    "region": "US"
+  },
+  {
+    "id": "paymentsdive",
+    "name": "Payments Dive",
+    "url": "https://www.paymentsdive.com/",
+    "category": "Financials",
+    "region": "US",
+    "feed": "https://www.paymentsdive.com/feeds/news/",
+    "feedEnabled": true,
+    "checkedAt": "2026-09-30"
+  },
+  {
+    "id": "pymnts",
+    "name": "PYMNTS",
+    "url": "https://www.pymnts.com/",
+    "category": "Financials",
+    "region": "US"
+  },
+  {
+    "id": "prnewswire",
+    "name": "PR Newswire",
+    "url": "https://www.prnewswire.com/news-releases/financial-services-latest-news/",
+    "category": "Press releases",
+    "region": "Global"
+  },
+  {
+    "id": "businesswire",
+    "name": "Business Wire",
+    "url": "https://www.businesswire.com/",
+    "category": "Press releases",
+    "region": "Global"
+  },
+  {
+    "id": "globenewswire",
+    "name": "GlobeNewswire",
+    "url": "https://www.globenewswire.com/",
+    "category": "Press releases",
+    "region": "Global"
+  },
+  {
+    "id": "nyse",
+    "name": "New York Stock Exchange",
+    "url": "https://www.nyse.com/market-insights",
+    "category": "Exchanges",
+    "region": "US"
+  },
+  {
+    "id": "cme",
+    "name": "CME Group · Insights",
+    "url": "https://www.cmegroup.com/insights.html",
+    "category": "Exchanges",
+    "region": "US"
+  },
+  {
+    "id": "cboe",
+    "name": "Cboe · Insights",
+    "url": "https://www.cboe.com/insights/",
+    "category": "Exchanges",
+    "region": "US"
+  },
+  {
+    "id": "lseg",
+    "name": "London Stock Exchange Group",
+    "url": "https://www.lseg.com/en/insights",
+    "category": "Exchanges",
+    "region": "UK"
+  },
+  {
+    "id": "hkex",
+    "name": "Hong Kong Exchanges",
+    "url": "https://www.hkex.com.hk/News/News-Release?sc_lang=en",
+    "category": "Exchanges",
+    "region": "Asia"
+  },
+  {
+    "id": "jpx",
+    "name": "Japan Exchange Group",
+    "url": "https://www.jpx.co.jp/english/corporate/news/",
+    "category": "Exchanges",
+    "region": "Asia"
+  }
+]

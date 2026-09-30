@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
 import AxeBuilder from '@axe-core/playwright'
 import type { History } from '../src/lib/types'
 
@@ -364,9 +365,13 @@ test('risk lab preserves focus, filters recovery episodes and exports the observ
   await page
     .getByRole('button', { name: 'Export episodes', exact: true })
     .click()
-  expect((await downloadPromise).suggestedFilename()).toBe(
-    'market-atlas-drawdowns-SPY-1Y.csv',
-  )
+  const exported = await downloadPromise
+  expect(exported.suggestedFilename()).toBe('market-atlas-drawdowns-SPY-1Y.csv')
+  const csv = await readFile((await exported.path())!, 'utf8')
+  expect(csv).toContain('Fetched at')
+  expect(csv).toContain('Price basis')
+  expect(csv).toContain('Synthetic test fixture')
+  expect(csv).toContain('Adjusted')
   const result = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa'])
     .disableRules(['color-contrast'])
@@ -457,6 +462,99 @@ test('a decline exactly at the filter boundary is included', async ({
   await expect(
     page.getByRole('region', { name: 'Drawdown episodes', exact: true }),
   ).toContainText('Ongoing at end')
+  await expect(
+    page.getByRole('link', { name: /Compare XLK since trough/ }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('link', { name: /Compare XLK decline/ }),
+  ).toHaveCount(1)
+})
+
+test('episode links compare the exact decline, recovery and ongoing rebound dates', async ({
+  page,
+}) => {
+  await page.unroute('**/api/history?*')
+  await page.route('**/api/history?*', (route) => {
+    const symbols = new URL(route.request().url()).searchParams
+      .get('symbols')!
+      .split(',')
+    const dates = [
+      '2026-01-02',
+      '2026-01-05',
+      '2026-01-06',
+      '2026-01-07',
+      '2026-01-08',
+      '2026-01-09',
+      '2026-01-12',
+      '2026-01-13',
+      '2026-01-14',
+    ]
+    return route.fulfill({
+      json: {
+        data: symbols.map((symbol) => ({
+          ...fixture(symbol),
+          points: [100, 110, 99, 88, 100, 108, 110, 99, 100].map(
+            (price, i) => ({
+              date: dates[i],
+              close: price,
+              adjusted: price,
+              volume: 1000,
+            }),
+          ),
+        })),
+        errors: [],
+      },
+    })
+  })
+  await page.goto(
+    '/?view=risk&period=1Y&symbols=XLK,XLF&benchmark=QQQ&asset=XLK&decline=5&start=2026-01-02&end=2026-01-14',
+  )
+  await expect(page.locator('.drawdown-table tbody tr')).toHaveCount(2)
+  await page
+    .getByRole('link', {
+      name: 'Compare XLK decline from Jan 5, 2026 to Jan 7, 2026',
+      exact: true,
+    })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Compare assets.', exact: true }),
+  ).toBeVisible()
+  await expect(page).toHaveURL(/start=2026-01-05&end=2026-01-07/)
+  await expect(page.locator('.symbol-chip')).toHaveCount(3)
+  await expect(page.getByLabel('Benchmark', { exact: true })).toHaveValue('QQQ')
+  await expect(page.locator('.chart-caption').first()).toContainText(
+    'Jan 5, 2026 – Jan 7, 2026',
+  )
+  await expect(page.locator('tbody tr').first()).toContainText('-20.00%')
+  await page.goBack()
+  await expect(page.getByLabel('Drawdown asset')).toHaveValue('XLK')
+  await expect(page.getByLabel('Minimum drawdown')).toHaveValue('5')
+  await expect(page).toHaveURL(/start=2026-01-02&end=2026-01-14/)
+  await page
+    .getByRole('link', {
+      name: 'Compare XLK recovery from Jan 7, 2026 to Jan 12, 2026',
+      exact: true,
+    })
+    .click()
+  await expect(page.locator('.chart-caption').first()).toContainText(
+    'Jan 7, 2026 – Jan 12, 2026',
+  )
+  await expect(page.locator('tbody tr').first()).toContainText('+25.00%')
+  await page.goBack()
+  await page
+    .getByRole('link', {
+      name: 'Compare XLK since trough from Jan 13, 2026 to Jan 14, 2026',
+      exact: true,
+    })
+    .click()
+  await expect(page.locator('.chart-caption').first()).toContainText(
+    'Jan 13, 2026 – Jan 14, 2026',
+  )
+  await expect(page.locator('tbody tr').first()).toContainText('+1.01%')
+  await page.reload()
+  await expect(page.locator('.chart-caption').first()).toContainText(
+    'Jan 13, 2026 – Jan 14, 2026',
+  )
 })
 
 test('all navigation remains reachable on a short mobile screen', async ({

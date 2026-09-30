@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Download } from 'lucide-react'
+import { ArrowUpRight, Download } from 'lucide-react'
 import { asset } from '../lib/catalog'
 import {
   align,
@@ -59,6 +59,16 @@ export function RiskView({
     .filter((e) => -e.depth >= threshold - 1e-8)
     .sort((a, b) => a.depth - b.depth)
   const setFocus = onFocus
+  const comparisonLink = (start: string, end: string) =>
+    `?${new URLSearchParams({
+      view: 'compare',
+      period: ctx.period,
+      benchmark: ctx.benchmark,
+      symbols: ctx.selected.join(','),
+      start,
+      end,
+      mode: 'return',
+    })}`
   const exportRisk = () =>
     downloadCSV(
       `market-atlas-risk-${windowKey(ctx.window)}.csv`,
@@ -290,6 +300,7 @@ export function RiskView({
                 downloadCSV(
                   `market-atlas-drawdowns-${focus}-${windowKey(ctx.window)}.csv`,
                   [
+                    'Asset',
                     'Peak',
                     'Trough',
                     'Recovered',
@@ -299,8 +310,14 @@ export function RiskView({
                     'Recovery observations',
                     'Peak-to-end observations',
                     'Peak-to-end calendar days',
+                    'Currency',
+                    'Source',
+                    'Fetched at',
+                    'Price basis',
+                    'Status',
                   ],
                   episodes.map((e) => [
+                    focus,
                     e.peak,
                     e.trough,
                     e.recovery,
@@ -310,6 +327,11 @@ export function RiskView({
                     e.recoveryObservations,
                     e.underwaterObservations,
                     e.calendarDays,
+                    ctx.data[focus]?.currency,
+                    ctx.data[focus]?.source,
+                    ctx.data[focus]?.fetchedAt,
+                    ctx.data[focus]?.adjusted ? 'Adjusted' : 'Unadjusted',
+                    ctx.data[focus]?.stale ? 'Stale cache' : 'Retrieved',
                   ]),
                 )
               }
@@ -334,6 +356,7 @@ export function RiskView({
                 <th className="right">Depth</th>
                 <th className="right">Days below peak</th>
                 <th className="right">Recovery observations</th>
+                <th>Compare assets</th>
               </tr>
             </thead>
             <tbody>
@@ -353,6 +376,25 @@ export function RiskView({
                   </td>
                   <td className="right">{num(e.calendarDays, 0)}</td>
                   <td className="right">{num(e.recoveryObservations, 0)}</td>
+                  <td>
+                    <div className="episode-links">
+                      <a
+                        href={comparisonLink(e.peak, e.trough)}
+                        aria-label={`Compare ${focus} decline from ${shortDate(e.peak)} to ${shortDate(e.trough)}`}
+                      >
+                        Decline <ArrowUpRight size={13} aria-hidden="true" />
+                      </a>
+                      {e.end > e.trough && (
+                        <a
+                          href={comparisonLink(e.trough, e.end)}
+                          aria-label={`Compare ${focus} ${e.recovery ? 'recovery' : 'since trough'} from ${shortDate(e.trough)} to ${shortDate(e.end)}`}
+                        >
+                          {e.recovery ? 'Recovery' : 'Since trough'}
+                          <ArrowUpRight size={13} aria-hidden="true" />
+                        </a>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -374,6 +416,12 @@ export function RiskView({
           to recovery, or the window end if still underwater. Recovery
           observations count from trough to recovery; an ongoing episode has no
           known recovery time.
+        </p>
+        <p className="panel-note episode-note">
+          Compare your selected assets and benchmark during a decline (peak to
+          trough), a completed recovery (trough to recovery), or since an
+          ongoing episode’s trough. Each link opens the observed dates with
+          returns reset at the start. Use Back to return to this risk window.
         </p>
       </Panel>
       <div className="two-col risk-tail-panels">

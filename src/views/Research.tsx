@@ -97,7 +97,12 @@ export function Correlations({ ctx }: { ctx: MarketContext }) {
             {loaded.length}/{symbols.length} histories loaded
           </span>
         </div>
-        <div className="table-scroll">
+        <div
+          className="table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="Asset correlation matrix"
+        >
           <table className="correlation-table">
             <thead>
               <tr>
