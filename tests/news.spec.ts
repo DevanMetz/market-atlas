@@ -44,6 +44,7 @@ test('news searches ticker aliases and topics, groups copies and preserves filte
     page.getByRole('heading', { name: 'News & sentiment.', exact: true }),
   ).toBeVisible()
   await expect(page.locator('.headline-card')).toHaveCount(5)
+  await page.screenshot({ path: 'test-results/news-desktop.png' })
   await expect(page.locator('.headline-explanation').first()).toContainText(
     '2 grouped copies',
   )
@@ -74,6 +75,7 @@ test('sentiment charts, transparent sandbox and exports follow the sample', asyn
     }),
   ).toBeVisible()
   await expect(page.locator('.news-publisher-table tbody tr')).toHaveCount(2)
+  await page.screenshot({ path: 'test-results/news-sentiment.png' })
   await page
     .getByLabel('Headline sentiment sandbox')
     .fill('Stocks do not rally')
@@ -104,6 +106,7 @@ test('the large directory searches, separates links from feeds and applies sourc
 }) => {
   await page.goto('/?view=news&newsTab=sources&feeds=bbc,cnbc')
   await expect(page.locator('.source-card')).toHaveCount(24)
+  await page.screenshot({ path: 'test-results/news-directory.png' })
   await page.getByLabel('Search news sources').fill('Guardian')
   await expect(page.locator('.source-card')).toHaveCount(1)
   await expect(page.locator('.source-card')).toContainText('Website link')
@@ -156,6 +159,7 @@ test('news and source directory fit a narrow screen', async ({ page }) => {
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: 'test-results/news-mobile.png' })
   await page
     .getByRole('button', { name: 'Source directory', exact: true })
     .click()

@@ -170,7 +170,8 @@ async function readFeed(
     return prior
   try {
     const response = await fetch(source.feed!, {
-      redirect: 'error',
+      // Workerd accepts manual/follow; explicitly reject 3xx below.
+      redirect: 'manual',
       signal: AbortSignal.timeout(9000),
       headers: {
         Accept:

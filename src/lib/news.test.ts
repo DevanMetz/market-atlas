@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   analyzeHeadlines,
   FEED_SOURCES,
@@ -8,7 +8,12 @@ import {
   summarizeHeadlines,
 } from './news'
 import type { NewsFeed, NewsItem } from './news'
-import { parseNewsFeed, parseNewsSources, safeNewsUrl } from '../../worker/news'
+import {
+  newsResponse,
+  parseNewsFeed,
+  parseNewsSources,
+  safeNewsUrl,
+} from '../../worker/news'
 
 const now = Date.parse('2026-09-29T20:00:00Z')
 const item = (
@@ -228,5 +233,64 @@ describe('publisher feed parsing and boundaries', () => {
     expect(
       FEED_SOURCES.every((s) => s.feed?.startsWith('https:') && s.checkedAt),
     ).toBe(true)
+  })
+})
+
+describe('news request pipeline', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const context = () => ({ waitUntil: vi.fn() }) as unknown as ExecutionContext
+  const request = () =>
+    new Request('https://market.example/api/news?sources=bbc')
+  it('retrieves and caches feed entries using the Worker-supported redirect mode', async () => {
+    const put = vi.fn(async () => undefined)
+    vi.stubGlobal('caches', { default: { match: async () => undefined, put } })
+    const upstream = vi.fn(async (_url: string, options: RequestInit) => {
+      if (options.redirect === 'error')
+        throw new TypeError(
+          'Invalid redirect value, must be one of follow or manual',
+        )
+      return new Response(
+        '<rss><item><title>Stocks rally</title><link>https://example.org/story</link></item></rss>',
+      )
+    })
+    vi.stubGlobal('fetch', upstream)
+    const response = await newsResponse(['bbc'], request(), context())
+    expect(response.errors).toEqual([])
+    expect(response.feeds[0].items[0].title).toBe('Stocks rally')
+    expect(put).toHaveBeenCalledOnce()
+  })
+  it('rejects publisher redirects without following their destination', async () => {
+    vi.stubGlobal('caches', { default: { match: async () => undefined } })
+    const upstream = vi.fn(async (_url: string, options: RequestInit) => {
+      expect(options.redirect).toBe('manual')
+      return new Response(null, {
+        status: 301,
+        headers: { Location: 'https://unapproved.example/' },
+      })
+    })
+    vi.stubGlobal('fetch', upstream)
+    const response = await newsResponse(['bbc'], request(), context())
+    expect(response.feeds).toEqual([])
+    expect(response.errors[0].message).toContain('HTTP 301')
+    expect(upstream).toHaveBeenCalledOnce()
+  })
+  it('returns an explicitly stale cached sample if a publisher fails', async () => {
+    const prior = {
+      ...feed([item('Stocks rally')]),
+      fetchedAt: new Date(Date.now() - 3600000).toISOString(),
+    }
+    vi.stubGlobal('caches', {
+      default: { match: async () => Response.json(prior) },
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 503 })),
+    )
+    const response = await newsResponse(['bbc'], request(), context())
+    expect(response.feeds[0]).toMatchObject({
+      stale: true,
+      fetchedAt: prior.fetchedAt,
+      items: prior.items,
+    })
   })
 })
