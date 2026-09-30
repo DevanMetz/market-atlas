@@ -237,6 +237,27 @@ test('advanced searches share their exact query and filter headline and sentimen
   )
   expect(sentimentCsv).toContain('q=%28ticker%3ANVDA')
   expect(sentimentCsv.trim().split(/\r?\n/)).toHaveLength(2)
+  await page.locator('.saved-views summary').click()
+  await page.getByLabel('Saved view name').fill('Company earnings search')
+  await page
+    .getByRole('button', { name: 'Save current view', exact: true })
+    .click()
+  await expect(page.locator('.saved-views-list li')).toHaveCount(1)
+  await page
+    .getByRole('button', { name: 'Close saved views', exact: true })
+    .click()
+  await page
+    .getByRole('button', { name: 'Clear headline search', exact: true })
+    .click()
+  await expect(page.locator('.news-chart-controls')).toContainText(
+    '5 dated headlines',
+  )
+  await page.locator('.saved-views summary').click()
+  await page.getByRole('link', { name: /Company earnings search/ }).click()
+  await expect(input).toHaveValue(query)
+  await expect(page.locator('.news-chart-controls')).toContainText(
+    '1 dated headlines',
+  )
 })
 
 test('invalid searches explain corrections and never display an unfiltered chart or export', async ({
@@ -289,6 +310,7 @@ test('search examples are keyboard accessible and fit mobile screens', async ({
   const input = page.getByLabel('Search news headlines')
   await expect(input).toHaveValue('(ticker:NVDA OR ticker:AAPL) earnings')
   await expect(input).toBeFocused()
+  expect((await input.boundingBox())!.width).toBeGreaterThan(300)
   await expect(page.locator('.headline-card')).toHaveCount(2)
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth))

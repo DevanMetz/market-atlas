@@ -857,6 +857,7 @@
     padding: 13px;
     gap: 10px;
   }
+  .news-filters .news-query-field,
   .news-filters .news-search {
     grid-column: 1 / -1;
   }
