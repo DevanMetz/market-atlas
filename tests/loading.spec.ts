@@ -8,8 +8,18 @@ test.beforeAll(async () => {
   const manifest = JSON.parse(
     await readFile('dist/.vite/manifest.json', 'utf8'),
   )
-  newsModulePath = `/${manifest['src/views/News.tsx'].file}`
-  timelineModulePath = `/${manifest['src/components/NewsTimeline.tsx'].file}`
+  const chunkPath = (name: string) => {
+    const chunk = Object.values(
+      manifest as Record<string, { file: string }>,
+    ).find(
+      (entry) =>
+        entry.file.startsWith(`assets/${name}-`) && entry.file.endsWith('.js'),
+    )
+    if (!chunk) throw new Error(`The build manifest has no ${name} chunk`)
+    return `/${chunk.file}`
+  }
+  newsModulePath = chunkPath('News')
+  timelineModulePath = chunkPath('NewsTimeline')
 })
 
 test.beforeEach(async ({ page }) => {
@@ -74,12 +84,10 @@ test('headline reading defers charts and market history until they are needed', 
   expect(requests.has(timelineModulePath)).toBe(false)
   expect([...scripts].some((path) => path.includes('/charts-'))).toBe(false)
   const files = await Promise.all(
-    [...scripts]
-      .sort()
-      .map(async (path) => ({
-        path,
-        bytes: (await stat(join('dist', path.slice(1)))).size,
-      })),
+    [...scripts].sort().map(async (path) => ({
+      path,
+      bytes: (await stat(join('dist', path.slice(1)))).size,
+    })),
   )
   await mkdir('test-results', { recursive: true })
   await writeFile(
