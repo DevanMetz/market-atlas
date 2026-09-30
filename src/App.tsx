@@ -479,7 +479,7 @@ export default function App() {
           </a>
           <div className="sidebar-status">
             <span>PUBLIC RESEARCH WORKSPACE</span>
-            <small>Market Atlas · v1.9</small>
+            <small>Market Atlas · v1.10</small>
           </div>
         </div>
       </aside>

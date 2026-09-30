@@ -32,6 +32,14 @@ Search is case-insensitive. Text fields match fragments, and phrases cannot span
 
 Queries support up to 400 characters, 80 terms/operators and 16 nested group or exclusion levels. Invalid syntax shows a correction message and hides results, charts and exports until corrected. The UI provides keyboard-accessible examples and a clear-search action. The exact query persists in shared links and saved views; headline CSVs include it, the research URL and the export timestamp. Sentiment exports follow the same filtered sample and include the research URL. Search documents are indexed when headlines change and queries compile once per edit; no regular expression or executable code is built from user input.
 
+### Compare headline searches
+
+In **Sentiment lab → Compare searches**, give two to four lines distinct names and their own headline queries. Compare companies, publishers, phrases or themes using the same search syntax. An empty query provides a baseline containing every headline remaining after the common filters. The publication window, main search, company focus, topic, publisher and tone filters above the chart apply to every line.
+
+Each hourly or daily UTC point is the mean score of scored headline groups matching that line. Groups can overlap across searches, while duplicate publisher copies count once within each search. The editor shows dated matches and scored counts for each line; tooltips and the data table expose per-bucket sample size and coverage. No matched titles and matched titles with no scoring cue both have an unknown score, with different counts. The entire headline is scored; a company query does not turn it into company-specific sentiment. This remains a retrieved snapshot, not an archive or a return forecast.
+
+Names, queries, chart mode and interval persist in shared links and saved views. Names can be up to 32 characters and queries up to 400 characters. Invalid queries, blank or duplicate names, and malformed shared settings show a correction message and prevent partial charts or exports. Search-trend CSVs include the line name and exact query, all observed buckets, tone counts, scoring coverage, the research URL and feed retrieval timestamps. Saved research URLs support up to 24,000 characters, with a visible error before an oversized view can be saved.
+
 ## Develop
 
 Requires Node.js 22 or newer and npm.

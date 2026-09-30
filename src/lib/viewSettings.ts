@@ -21,6 +21,7 @@ export const VIEW_SETTINGS: Record<View, readonly string[]> = {
     'newsInterval',
     'newsChart',
     'newsTopics',
+    'newsSearches',
     'directory',
     'category',
     'region',
@@ -86,6 +87,7 @@ export type SavedView = {
   savedAt: string
 }
 export const SAVED_VIEWS_KEY = 'market-atlas-saved-views'
+export const SAVED_VIEW_QUERY_LIMIT = 24000
 
 export function parseSavedViews(raw: string | null): SavedView[] {
   try {
@@ -103,7 +105,7 @@ export function parseSavedViews(raw: string | null): SavedView[] {
           item.name.length > 80 ||
           typeof item.query !== 'string' ||
           !item.query.startsWith('?') ||
-          item.query.length > 4096 ||
+          item.query.length > SAVED_VIEW_QUERY_LIMIT ||
           typeof item.savedAt !== 'string' ||
           !Number.isFinite(Date.parse(item.savedAt))
         )

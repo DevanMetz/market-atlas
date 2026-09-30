@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { parseSavedViews, preserveViewSettings } from './viewSettings'
+import {
+  parseSavedViews,
+  preserveViewSettings,
+  SAVED_VIEW_QUERY_LIMIT,
+} from './viewSettings'
 
 const view = {
   id: 'a',
@@ -37,10 +41,38 @@ describe('saved research views', () => {
       parseSavedViews(
         JSON.stringify([
           { ...view, name: 'a'.repeat(81) },
-          { ...view, query: '?view=trends&symbols=' + 'A'.repeat(4096) },
+          {
+            ...view,
+            query: '?view=trends&symbols=' + 'A'.repeat(SAVED_VIEW_QUERY_LIMIT),
+          },
         ]),
       ),
     ).toEqual([])
+  })
+  it('restores long encoded custom news comparisons without silently discarding them', () => {
+    const searches = Array.from({ length: 4 }, (_, i) => ({
+      name: `Search ${i + 1}`,
+      query: '市場'.repeat(100),
+    }))
+    const query =
+      '?' +
+      new URLSearchParams({
+        view: 'news',
+        newsChart: 'searches',
+        newsSearches: JSON.stringify(searches),
+      })
+    expect(query.length).toBeGreaterThan(4096)
+    expect(query.length).toBeLessThan(SAVED_VIEW_QUERY_LIMIT)
+    expect(parseSavedViews(JSON.stringify([{ ...view, query }]))[0].query).toBe(
+      query,
+    )
+    expect(
+      preserveViewSettings(
+        'news',
+        query,
+        new URLSearchParams({ view: 'news' }),
+      ).get('newsSearches'),
+    ).toBe(JSON.stringify(searches))
   })
 })
 

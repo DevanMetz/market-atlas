@@ -378,13 +378,28 @@ export function headlineTopicTimeline(
   topics: string[],
   interval: NewsInterval = 'day',
 ) {
+  return headlineGroupTimeline(
+    items,
+    topics.map((topic) => ({
+      id: topic,
+      matches: (item: AnalyzedHeadline) => item.topics.includes(topic),
+    })),
+    interval,
+  ).map(({ groups, ...row }) => ({ ...row, topics: groups }))
+}
+
+export function headlineGroupTimeline(
+  items: AnalyzedHeadline[],
+  groups: { id: string; matches: (item: AnalyzedHeadline) => boolean }[],
+  interval: NewsInterval = 'day',
+) {
   return headlineBuckets(items, interval).map(([date, group]) => ({
     date,
     time: Date.parse(date),
-    topics: Object.fromEntries(
-      topics.map((topic) => [
-        topic,
-        summarizeHeadlines(group.filter((item) => item.topics.includes(topic))),
+    groups: Object.fromEntries(
+      groups.map(({ id, matches }) => [
+        id,
+        summarizeHeadlines(group.filter(matches)),
       ]),
     ),
   }))

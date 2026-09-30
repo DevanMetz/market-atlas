@@ -512,6 +512,71 @@
   font-size: 12px;
   color: #a2b49f;
 }
+.news-chart-controls .segmented {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.news-comparison-editor {
+  margin: 0;
+  padding: 0 22px 20px;
+  border: 0;
+  min-width: 0;
+  color: #b7c9ae;
+  font-size: 12px;
+}
+.news-comparison-editor legend {
+  padding: 0 0 8px;
+  color: #d3e7bc;
+}
+.news-comparison-editor > p {
+  line-height: 1.7;
+  margin: 0 0 12px;
+}
+.news-comparison-rows {
+  display: grid;
+  gap: 10px;
+}
+.news-comparison-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr) auto;
+  align-items: end;
+  gap: 8px 12px;
+  padding: 12px;
+  background: #18221b;
+  border: 1px solid #354331;
+  border-left-width: 3px;
+  border-radius: 5px;
+  min-width: 0;
+}
+.news-comparison-row label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.news-comparison-row input {
+  width: 100%;
+  min-width: 0;
+  font-size: 12px;
+}
+.news-comparison-row input[aria-invalid='true'] {
+  border-color: #e0a698;
+}
+.news-comparison-feedback {
+  grid-column: 1 / -1;
+  color: #a8bb9e;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.news-comparison-error {
+  color: #f1bcae;
+}
+.news-comparison-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12px;
+}
 .news-topic-picker {
   margin: 0;
   padding: 0 22px 12px;
@@ -595,9 +660,21 @@
     flex: 1;
   }
   .news-chart-controls,
+  .news-comparison-editor,
   .news-topic-picker {
     padding-left: 16px;
     padding-right: 16px;
+  }
+  .news-comparison-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .news-comparison-query {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .news-comparison-row > button {
+    grid-column: 2;
+    grid-row: 1;
   }
   .news-chart-data {
     margin-left: 16px;

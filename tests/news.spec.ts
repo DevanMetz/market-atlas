@@ -444,6 +444,257 @@ test('hourly topic comparisons preserve their settings and export coverage with 
   ).toContainText('No scored headlines for the selected topics.')
 })
 
+test('custom search comparisons preserve names, common filters, saved views and export provenance', async ({
+  page,
+}) => {
+  await page.goto('/?view=news&newsTab=sentiment&feeds=bbc,cnbc&days=1')
+  await page
+    .getByRole('button', { name: 'Compare searches', exact: true })
+    .click()
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline sentiment by search',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(page.getByLabel('Comparison 1 query')).toHaveValue('ticker:NVDA')
+  await expect(page.locator('.news-comparison-row').first()).toContainText(
+    '1 dated match · 1 scored',
+  )
+  await page.getByLabel('Comparison 1 name').fill('Company earnings')
+  await page
+    .getByLabel('Comparison 1 query')
+    .fill('(ticker:NVDA OR ticker:AAPL) earnings')
+  await page.getByLabel('Comparison 2 name').fill('Warnings')
+  await page.getByLabel('Comparison 2 query').fill('"profit warning"')
+  await page
+    .getByRole('button', { name: 'Add comparison', exact: true })
+    .click()
+  await page.getByLabel('Comparison 3 name').fill('All headlines')
+  await expect(page.locator('.news-comparison-row').nth(0)).toContainText(
+    '2 dated matches · 2 scored',
+  )
+  await expect(page.locator('.news-comparison-row').nth(1)).toContainText(
+    '1 dated match · 1 scored',
+  )
+  await expect(page.locator('.news-comparison-row').nth(2)).toContainText(
+    '5 dated matches · 4 scored',
+  )
+  await page.getByLabel('News chart interval').selectOption('hour')
+  await page.reload()
+  await expect(page.getByLabel('Comparison 1 name')).toHaveValue(
+    'Company earnings',
+  )
+  await expect(page.getByLabel('Comparison 2 query')).toHaveValue(
+    '"profit warning"',
+  )
+  await expect(page.getByLabel('Comparison 3 query')).toHaveValue('')
+  await page.locator('.news-chart-data summary').click()
+  await expect(page.locator('.news-chart-data tbody tr')).toHaveCount(9)
+  await expect(page.locator('.news-chart-data tbody')).toContainText('—')
+  const downloadEvent = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export search trends', exact: true })
+    .click()
+  const download = await downloadEvent
+  expect(download.suggestedFilename()).toBe(
+    'market-atlas-news-search-trends.csv',
+  )
+  const csv = await readFile((await download.path())!, 'utf8')
+  expect(csv).toContain('"Comparison query"')
+  expect(csv).toContain(
+    '"Company earnings","(ticker:NVDA OR ticker:AAPL) earnings"',
+  )
+  expect(csv).toContain('"Warnings","""profit warning"""')
+  expect(csv).toContain('"Feed retrieval times (UTC)"')
+  expect(csv).toContain('newsSearches=')
+  expect(csv.trim().split(/\r?\n/)).toHaveLength(10)
+  await page.getByLabel('Search news headlines').fill('NVDA')
+  await expect(page.locator('.news-comparison-row').nth(0)).toContainText(
+    '1 dated match · 1 scored',
+  )
+  await expect(page.locator('.news-comparison-row').nth(1)).toContainText(
+    '0 dated matches · 0 scored',
+  )
+  await expect(page.locator('.news-comparison-row').nth(2)).toContainText(
+    '1 dated match · 1 scored',
+  )
+  await page
+    .getByRole('button', { name: 'Clear headline search', exact: true })
+    .click()
+  await page.locator('.news-chart-data summary').click()
+  await page
+    .locator('.news-timeline-panel')
+    .screenshot({ path: 'test-results/news-custom-comparison-desktop.png' })
+  await page.locator('.saved-views summary').click()
+  await page.getByLabel('Saved view name').fill('Earnings and warnings')
+  await page
+    .getByRole('button', { name: 'Save current view', exact: true })
+    .click()
+  await expect(page.locator('.saved-views-list li')).toHaveCount(1)
+  await page
+    .getByRole('button', { name: 'Close saved views', exact: true })
+    .click()
+  await page.getByRole('button', { name: 'All headlines', exact: true }).click()
+  await page.locator('.saved-views summary').click()
+  await page.getByRole('link', { name: /Earnings and warnings/ }).click()
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline sentiment by search',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(page.getByLabel('Comparison 2 name')).toHaveValue('Warnings')
+  await expect(page.locator('.news-comparison-row')).toHaveCount(3)
+})
+
+test('custom comparisons reject incomplete queries and duplicate names without partial charts', async ({
+  page,
+}) => {
+  await page.goto(
+    '/?view=news&newsTab=sentiment&feeds=bbc,cnbc&newsChart=searches',
+  )
+  const chart = page.getByRole('region', {
+    name: 'Daily headline sentiment by search',
+    exact: true,
+  })
+  await expect(chart).toBeVisible()
+  await page.getByLabel('Comparison 1 query').fill('earnings OR')
+  await expect(page.getByLabel('Comparison 1 query')).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  )
+  await expect(
+    page.locator('.news-comparison-editor').getByRole('alert'),
+  ).toContainText('after the operator')
+  await expect(chart).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'Export search trends', exact: true }),
+  ).toBeDisabled()
+  await page.reload()
+  await expect(page.getByLabel('Comparison 1 query')).toHaveValue('earnings OR')
+  await expect(chart).toHaveCount(0)
+  await page.getByLabel('Comparison 1 query').fill('ticker:NVDA')
+  await page.getByLabel('Comparison 2 name').fill('nvidia')
+  await expect(page.getByLabel('Comparison 2 name')).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  )
+  await expect(
+    page.locator('.news-comparison-editor').getByRole('alert'),
+  ).toContainText('different name')
+  await expect(chart).toHaveCount(0)
+  await page.getByLabel('Comparison 2 name').fill('Meetings')
+  await page.getByLabel('Comparison 2 query').fill('title:meeting')
+  await expect(chart).toBeVisible()
+  await expect(page.locator('.news-comparison-row').nth(1)).toContainText(
+    '1 dated match · 0 scored',
+  )
+  await page.getByLabel('Comparison 1 query').fill('title:zzzznomatches')
+  await expect(
+    page.locator('.news-timeline-panel').getByRole('status'),
+  ).toContainText('No scored headlines for the selected searches.')
+  await expect(page.locator('.news-comparison-row').first()).toContainText(
+    '0 dated matches · 0 scored',
+  )
+  await page.goto(
+    '/?view=news&newsTab=sentiment&feeds=bbc&newsChart=searches&newsSearches=%7Bbroken',
+  )
+  await expect(
+    page.locator('.news-comparison-editor').getByRole('alert'),
+  ).toContainText('could not be read')
+  await expect(
+    page.getByRole('button', { name: 'Export search trends', exact: true }),
+  ).toBeDisabled()
+  await page
+    .getByRole('button', { name: 'Reset comparison examples', exact: true })
+    .click()
+  await expect(page.getByLabel('Comparison 1 query')).toHaveValue('ticker:NVDA')
+  await expect(chart).toBeVisible()
+})
+
+test('custom comparison controls fit mobile and enforce two to four named lines', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(
+    '/?view=news&newsTab=sentiment&feeds=bbc,cnbc&newsChart=searches&days=1',
+  )
+  await expect(page.locator('.news-comparison-row')).toHaveCount(2)
+  await expect(
+    page.getByRole('button', { name: 'Remove comparison 1', exact: true }),
+  ).toBeDisabled()
+  await page
+    .getByRole('button', { name: 'Add comparison', exact: true })
+    .click()
+  await page.getByLabel('Comparison 3 name').fill('All headlines')
+  await page
+    .getByRole('button', { name: 'Add comparison', exact: true })
+    .click()
+  await expect(
+    page.getByRole('button', { name: 'Add comparison', exact: true }),
+  ).toBeDisabled()
+  await page.getByLabel('Comparison 4 name').fill('Meetings')
+  await page.getByLabel('Comparison 4 query').fill('title:meeting')
+  await page.getByLabel('News chart interval').selectOption('day')
+  await expect(
+    page.getByRole('region', {
+      name: 'Daily headline sentiment by search',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390)
+  expect(
+    (await page.getByLabel('Comparison 1 query').boundingBox())!.width,
+  ).toBeGreaterThan(270)
+  await page
+    .locator('.news-timeline-panel')
+    .screenshot({ path: 'test-results/news-custom-comparison-mobile.png' })
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .disableRules(['color-contrast'])
+    .analyze()
+  expect(
+    accessibility.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    ),
+  ).toEqual([])
+  await page
+    .getByRole('button', { name: 'Remove comparison 4', exact: true })
+    .click()
+  await page
+    .getByRole('button', { name: 'Remove comparison 3', exact: true })
+    .click()
+  await expect(page.locator('.news-comparison-row')).toHaveCount(2)
+  await expect(
+    page.getByRole('button', { name: 'Remove comparison 2', exact: true }),
+  ).toBeDisabled()
+})
+
+test('oversized research links cannot appear saved and then disappear on reload', async ({
+  page,
+}) => {
+  await page.goto('/?view=news&feeds=bbc')
+  await expect(page.locator('.headline-card')).toHaveCount(5)
+  await page.evaluate(() =>
+    history.replaceState({}, '', '?view=news&oversized=' + 'x'.repeat(24000)),
+  )
+  await page.locator('.saved-views summary').click()
+  await page.getByLabel('Saved view name').fill('Oversized test view')
+  await page
+    .getByRole('button', { name: 'Save current view', exact: true })
+    .click()
+  await expect(page.locator('.saved-views-message')).toContainText(
+    'too long to save',
+  )
+  await expect(page.locator('.saved-views-list li')).toHaveCount(0)
+  expect(
+    await page.evaluate(() => localStorage.getItem('market-atlas-saved-views')),
+  ).toBeNull()
+})
+
 test('failed news feeds remain visible without fabricated headlines', async ({
   page,
 }) => {

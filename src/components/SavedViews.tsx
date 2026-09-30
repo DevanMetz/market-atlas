@@ -1,6 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { BookmarkPlus, Copy, Trash2, X } from 'lucide-react'
-import { parseSavedViews, SAVED_VIEWS_KEY } from '../lib/viewSettings'
+import {
+  parseSavedViews,
+  SAVED_VIEWS_KEY,
+  SAVED_VIEW_QUERY_LIMIT,
+} from '../lib/viewSettings'
 import type { SavedView } from '../lib/viewSettings'
 
 export function SavedViews({
@@ -102,6 +106,12 @@ export function SavedViews({
               return
             }
             const query = window.location.search
+            if (query.length > SAVED_VIEW_QUERY_LIMIT) {
+              setMessage(
+                'This research link is too long to save. Shorten the searches or reduce the selected filters.',
+              )
+              return
+            }
             const duplicate = views.find((v) => v.query === query)
             if (!duplicate && views.length >= 20) {
               setMessage('You can save 20 views. Remove a view to make room.')
