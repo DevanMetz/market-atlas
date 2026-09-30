@@ -652,12 +652,20 @@
 .news-chart-data table {
   min-width: 680px;
 }
+.news-chart-data .selected-measure {
+  color: #d3f1ad;
+  background: #20301d;
+}
 @media (max-width: 760px) {
   .news-chart-actions {
     width: 100%;
   }
   .news-chart-actions label {
     flex: 1;
+  }
+  .news-chart-actions.has-comparison > .button {
+    width: 100%;
+    justify-content: center;
   }
   .news-chart-controls,
   .news-comparison-editor,

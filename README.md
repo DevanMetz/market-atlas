@@ -40,6 +40,14 @@ Each hourly or daily UTC point is the mean score of scored headline groups match
 
 Names, queries, chart mode and interval persist in shared links and saved views. Names can be up to 32 characters and queries up to 400 characters. Invalid queries, blank or duplicate names, and malformed shared settings show a correction message and prevent partial charts or exports. Search-trend CSVs include the line name and exact query, all observed buckets, tone counts, scoring coverage, the research URL and feed retrieval timestamps. Saved research URLs support up to 24,000 characters, with a visible error before an oversized view can be saved.
 
+### Compare volume and scoring coverage
+
+Topic and custom-search charts offer three measures: **Mean headline score**, **Headline count**, and **Scoring coverage**. The first uses scored titles only. Headline count includes every matching, dated headline group, including unscored titles, and uses an integer axis that grows with the sample. Scoring coverage is `100 × scored groups / matching groups`, displayed from 0% to 100%; it describes how often the English lexicon finds a cue, not model confidence, accuracy or publisher coverage.
+
+A bucket containing unscored titles has zero scoring coverage and an unknown mean score. A bucket with no matching titles has zero retrieved volume and unknown scoring coverage. Entire hours or days without retrieved headlines remain omitted rather than fabricated. Daily coverage is calculated from daily counts, not by averaging hourly percentages. All common filters apply, and overlapping topics or searches must not be summed as independent market totals.
+
+The selected comparison measure persists across topic/search modes, shared links and saved views. The all-headline view retains its volume bars and mean-score line. Exports include the line measure and plotted value alongside every underlying metric, query, research URL and feed timestamp; the chart data table highlights the selected measure.
+
 ## Develop
 
 Requires Node.js 22 or newer and npm.

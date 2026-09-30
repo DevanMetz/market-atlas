@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeHeadlines } from './news'
+import { analyzeHeadlines, headlineMeasure } from './news'
 import type { NewsItem } from './news'
 import {
   compareHeadlineSearches,
@@ -56,6 +56,37 @@ const headlines = analyzeHeadlines([
 ])
 
 describe('custom news comparisons', () => {
+  it('keeps zero volume, zero scoring coverage and unknown scores distinct', () => {
+    const { timeline } = compareHeadlineSearches(
+      headlines,
+      DEFAULT_NEWS_COMPARISONS,
+      'hour',
+    )
+    const unscored = timeline[0].groups['search-1']
+    const absent = timeline[2].groups['search-1']
+    expect(headlineMeasure(unscored, 'volume')).toBe(1)
+    expect(headlineMeasure(unscored, 'coverage')).toBe(0)
+    expect(headlineMeasure(unscored, 'score')).toBeNull()
+    expect(headlineMeasure(absent, 'volume')).toBe(0)
+    expect(headlineMeasure(absent, 'coverage')).toBeNull()
+    expect(headlineMeasure(absent, 'score')).toBeNull()
+  })
+
+  it('calculates daily coverage from daily counts, not the unweighted mean of hourly percentages', () => {
+    const queries = [
+      { name: 'Tech', query: 'ticker:NVDA OR ticker:AAPL' },
+      { name: 'All', query: '' },
+    ]
+    const daily = compareHeadlineSearches(headlines, queries, 'day').timeline[0]
+      .groups['search-0']
+    const hourly = compareHeadlineSearches(headlines, queries, 'hour').timeline
+    expect(headlineMeasure(hourly[0].groups['search-0'], 'coverage')).toBe(50)
+    expect(headlineMeasure(hourly[1].groups['search-0'], 'coverage')).toBe(100)
+    expect(headlineMeasure(daily, 'coverage')).toBeCloseTo(200 / 3)
+    expect(headlineMeasure(daily, 'volume')).toBe(3)
+    expect(headlineMeasure(daily, 'score')).toBe(7.5)
+  })
+
   it('compares overlapping searches on the same observed UTC buckets without double-counting copies', () => {
     const { timeline, errors } = compareHeadlineSearches(
       headlines,

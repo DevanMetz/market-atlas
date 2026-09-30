@@ -345,6 +345,26 @@ export function summarizeHeadlines(items: AnalyzedHeadline[]) {
   }
 }
 export type NewsInterval = 'hour' | 'day'
+export const NEWS_MEASURES = ['score', 'volume', 'coverage'] as const
+export type NewsMeasure = (typeof NEWS_MEASURES)[number]
+export const NEWS_MEASURE_LABELS: Record<NewsMeasure, string> = {
+  score: 'Mean headline score',
+  volume: 'Headline count',
+  coverage: 'Scoring coverage',
+}
+
+export function headlineMeasure(
+  sample: Pick<
+    ReturnType<typeof summarizeHeadlines>,
+    'total' | 'scored' | 'score'
+  >,
+  measure: NewsMeasure,
+): number | null {
+  if (measure === 'volume') return sample.total
+  if (measure === 'coverage')
+    return sample.total ? (100 * sample.scored) / sample.total : null
+  return sample.score
+}
 
 function headlineBuckets(items: AnalyzedHeadline[], interval: NewsInterval) {
   const groups = new Map<string, AnalyzedHeadline[]>()

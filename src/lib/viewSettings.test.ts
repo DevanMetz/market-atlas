@@ -100,11 +100,12 @@ describe('shareable chart settings', () => {
   it('preserves a news topic comparison when saving or sharing research', () => {
     const result = preserveViewSettings(
       'news',
-      '?newsTab=sentiment&days=1&newsInterval=hour&newsChart=topics&newsTopics=Technology,Energy&feeds=bbc,cnbc&newsCompanies=AAPL,MSFT',
+      '?newsTab=sentiment&days=1&newsInterval=hour&newsChart=topics&newsMeasure=coverage&newsTopics=Technology,Energy&feeds=bbc,cnbc&newsCompanies=AAPL,MSFT',
       new URLSearchParams({ view: 'news' }),
     )
     expect(result.get('newsInterval')).toBe('hour')
     expect(result.get('newsChart')).toBe('topics')
+    expect(result.get('newsMeasure')).toBe('coverage')
     expect(result.get('newsTopics')).toBe('Technology,Energy')
     expect(result.get('feeds')).toBe('bbc,cnbc')
     expect(result.get('newsCompanies')).toBe('AAPL,MSFT')

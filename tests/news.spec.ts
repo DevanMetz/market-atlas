@@ -695,6 +695,268 @@ test('oversized research links cannot appear saved and then disappear on reload'
   ).toBeNull()
 })
 
+test('comparison measures preserve missing coverage, export plotted values and restore saved selections', async ({
+  page,
+}) => {
+  const searches = [
+    { name: 'Meetings', query: 'title:meeting' },
+    { name: 'Absent', query: 'title:zzzznomatches' },
+    { name: 'All', query: '' },
+  ]
+  const params = new URLSearchParams({
+    view: 'news',
+    newsTab: 'sentiment',
+    feeds: 'bbc,cnbc',
+    days: '1',
+    newsChart: 'searches',
+    newsSearches: JSON.stringify(searches),
+    newsMeasure: 'coverage',
+  })
+  await page.goto('/?' + params)
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline scoring coverage by search',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(page.getByLabel('News comparison measure')).toHaveValue(
+    'coverage',
+  )
+  await page.locator('.news-chart-data summary').click()
+  const meetingRows = page
+    .locator('.news-chart-data tbody tr')
+    .filter({ has: page.getByRole('cell', { name: 'Meetings', exact: true }) })
+  const missingRows = page
+    .locator('.news-chart-data tbody tr')
+    .filter({ has: page.getByRole('cell', { name: 'Absent', exact: true }) })
+  await expect(meetingRows).toHaveCount(3)
+  await expect(
+    meetingRows.locator('td.selected-measure').filter({ hasText: /^0%$/ }),
+  ).toHaveCount(1)
+  await expect(
+    meetingRows.locator('td.selected-measure').filter({ hasText: /^—$/ }),
+  ).toHaveCount(2)
+  await expect(
+    missingRows.locator('td.selected-measure').filter({ hasText: /^—$/ }),
+  ).toHaveCount(3)
+  await expect(
+    page.locator('.news-timeline-panel > .panel-note'),
+  ).toContainText('not confidence, accuracy')
+  const downloadEvent = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export search trends', exact: true })
+    .click()
+  const csv = await readFile((await (await downloadEvent).path())!, 'utf8')
+  expect(csv).toContain('"Line measure","Line value"')
+  expect(csv).toContain(
+    '"Meetings","title:meeting","Scoring coverage","0","1","0","0",""',
+  )
+  expect(csv).toContain(
+    '"Absent","title:zzzznomatches","Scoring coverage","","0","0","",""',
+  )
+  await page.getByLabel('News comparison measure').selectOption('volume')
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline volume by search',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(
+    missingRows.locator('td.selected-measure').filter({ hasText: /^0$/ }),
+  ).toHaveCount(3)
+  await page.getByLabel('News comparison measure').selectOption('coverage')
+  await page.getByLabel('News chart interval').selectOption('day')
+  await page.reload()
+  await expect(page.getByLabel('News comparison measure')).toHaveValue(
+    'coverage',
+  )
+  await expect(page.getByLabel('News chart interval')).toHaveValue('day')
+  await page.locator('.saved-views summary').click()
+  await page.getByLabel('Saved view name').fill('News coverage comparison')
+  await page
+    .getByRole('button', { name: 'Save current view', exact: true })
+    .click()
+  await expect(page.locator('.saved-views-list li')).toHaveCount(1)
+  await page
+    .getByRole('button', { name: 'Close saved views', exact: true })
+    .click()
+  await page.getByLabel('News comparison measure').selectOption('score')
+  await page.locator('.saved-views summary').click()
+  await page.getByRole('link', { name: /News coverage comparison/ }).click()
+  await expect(page.getByLabel('News comparison measure')).toHaveValue(
+    'coverage',
+  )
+  await expect(
+    page.getByRole('region', {
+      name: 'Daily headline scoring coverage by search',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390)
+  await page
+    .locator('.news-timeline-panel')
+    .screenshot({ path: 'test-results/news-coverage-mobile.png' })
+})
+
+test('volume axes scale above 100 and metric changes also work for topics and the all-headline view', async ({
+  page,
+}) => {
+  await page.unroute('**/api/news?*')
+  await page.route('**/api/news?*', (route) => {
+    const ids = new URL(route.request().url()).searchParams
+      .get('sources')!
+      .split(',')
+    const publishedAt = new Date(Date.now() - 3600000).toISOString()
+    return route.fulfill({
+      json: {
+        feeds: ids.map((sourceId) => ({
+          sourceId,
+          fetchedAt: new Date().toISOString(),
+          items: Array.from({ length: 70 }, (_, i) => ({
+            title: `Nvidia shares rally in synthetic test case ${sourceId}-${i}`,
+            url: `https://example.org/${sourceId}/volume-${i}`,
+            sourceId,
+            publishedAt,
+          })),
+        })),
+        errors: [],
+      },
+    })
+  })
+  await page.goto(
+    '/?view=news&newsTab=sentiment&feeds=bbc,cnbc&newsChart=searches&newsMeasure=volume&days=1',
+  )
+  await expect(page.locator('.news-comparison-row').first()).toContainText(
+    '140 dated matches · 140 scored',
+  )
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline volume by search',
+      exact: true,
+    }),
+  ).toBeVisible()
+  const axis = page.locator(
+    '.news-sentiment-chart .recharts-yAxis .recharts-cartesian-axis-tick-value',
+  )
+  await expect
+    .poll(async () => Math.max(...(await axis.allTextContents()).map(Number)))
+    .toBeGreaterThanOrEqual(140)
+  expect(
+    (await axis.allTextContents())
+      .map(Number)
+      .every((value) => Number.isInteger(value) && value >= 0),
+  ).toBe(true)
+  await page
+    .locator('.news-timeline-panel')
+    .screenshot({ path: 'test-results/news-volume-comparison-desktop.png' })
+  await page.getByLabel('News comparison measure').selectOption('coverage')
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline scoring coverage by search',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect
+    .poll(async () => (await axis.allTextContents()).includes('100%'))
+    .toBe(true)
+  expect(
+    (await axis.allTextContents()).every((value) => value.endsWith('%')),
+  ).toBe(true)
+  await page.getByRole('button', { name: 'All headlines', exact: true }).click()
+  await expect(page.getByLabel('News comparison measure')).toHaveCount(0)
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline volume and mean sentiment score',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await page
+    .getByRole('button', { name: 'Compare topics', exact: true })
+    .click()
+  await expect(page.getByLabel('News comparison measure')).toHaveValue(
+    'coverage',
+  )
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline scoring coverage by topic',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await page.getByLabel('News comparison measure').selectOption('volume')
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline volume by topic',
+      exact: true,
+    }),
+  ).toBeVisible()
+  const downloadEvent = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export topic trends', exact: true })
+    .click()
+  const csv = await readFile((await (await downloadEvent).path())!, 'utf8')
+  expect(csv).toContain('"Technology","","Headline count","140","140"')
+  await page.getByLabel('News comparison measure').selectOption('score')
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline sentiment by topic',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await page.goto(
+    '/?view=news&newsTab=sentiment&feeds=bbc&newsChart=topics&newsMeasure=unsupported',
+  )
+  await expect(page.getByLabel('News comparison measure')).toHaveValue('score')
+})
+
+test('zero-coverage samples plot as zero while empty comparisons remain unknown', async ({
+  page,
+}) => {
+  const params = new URLSearchParams({
+    view: 'news',
+    newsTab: 'sentiment',
+    feeds: 'bbc',
+    days: '1',
+    newsChart: 'searches',
+    newsMeasure: 'coverage',
+    newsSearches: JSON.stringify([
+      { name: 'Meetings', query: 'title:meeting' },
+      { name: 'Absent', query: 'title:zzzznomatches' },
+    ]),
+  })
+  await page.goto('/?' + params)
+  await expect(
+    page.getByRole('region', {
+      name: 'Hourly headline scoring coverage by search',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(
+    page.locator('.news-timeline-panel').getByRole('status'),
+  ).toHaveCount(0)
+  await expect(
+    page.locator('.news-sentiment-chart .recharts-line-dots .recharts-dot'),
+  ).toHaveCount(1)
+  await page.getByLabel('Comparison 1 query').fill('title:zzzzothermissing')
+  await expect(
+    page.locator('.news-timeline-panel').getByRole('status'),
+  ).toContainText('cannot be calculated without headlines')
+  await expect(
+    page.locator('.news-sentiment-chart .recharts-line-dots .recharts-dot'),
+  ).toHaveCount(0)
+  await page.getByLabel('News comparison measure').selectOption('volume')
+  await expect(
+    page.locator('.news-timeline-panel').getByRole('status'),
+  ).toContainText('Zero counts describe only the retrieved sample')
+  await page.getByLabel('Comparison 1 query').fill('earnings OR')
+  await expect(page.locator('.news-sentiment-chart')).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'Export search trends', exact: true }),
+  ).toBeDisabled()
+})
+
 test('failed news feeds remain visible without fabricated headlines', async ({
   page,
 }) => {

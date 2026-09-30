@@ -20,6 +20,7 @@ export const VIEW_SETTINGS: Record<View, readonly string[]> = {
     'newsSort',
     'newsInterval',
     'newsChart',
+    'newsMeasure',
     'newsTopics',
     'newsSearches',
     'directory',

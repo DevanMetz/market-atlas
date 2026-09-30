@@ -17,6 +17,9 @@ import {
   HEADLINE_TOPICS,
   headlineTimeline,
   headlineTopicTimeline,
+  headlineMeasure,
+  NEWS_MEASURES,
+  NEWS_MEASURE_LABELS,
 } from '../lib/news'
 import type { AnalyzedHeadline, NewsFeed } from '../lib/news'
 import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
@@ -66,6 +69,12 @@ export function NewsTimeline({
     DEFAULT_TOPICS,
     validTopics,
   )
+  const [measure, setMeasure] = useQueryChoice(
+    'newsMeasure',
+    NEWS_MEASURES,
+    'score',
+  )
+  const lineMeasure = chart === 'all' ? 'score' : measure
   const [showData, setShowData] = useState(false)
   const topics = useMemo(() => topicList.split(','), [topicList])
   const [searchList, setSearchList] = useQuerySetting(
@@ -153,6 +162,27 @@ export function NewsTimeline({
           })),
     [chart, comparison, groups, timeline],
   )
+  const measureDomain: [number, number] =
+    lineMeasure === 'score'
+      ? [-100, 100]
+      : lineMeasure === 'coverage'
+        ? [0, 100]
+        : [0, rows.reduce((maximum, row) => Math.max(maximum, row.total), 1)]
+  const measureLabel = (sample: Parameters<typeof headlineMeasure>[0]) => {
+    const value = headlineMeasure(sample, lineMeasure)
+    if (lineMeasure === 'score') return scoreLabel(value)
+    if (value === null) return 'No headlines'
+    return lineMeasure === 'coverage'
+      ? `${num(value, 1)}% coverage`
+      : `${num(value, 0)} headline${value === 1 ? '' : 's'}`
+  }
+  const hasComparisonValues = comparison.some((row) =>
+    groups.some((group) =>
+      lineMeasure === 'volume'
+        ? row.groups[group.id].total > 0
+        : headlineMeasure(row.groups[group.id], lineMeasure) !== null,
+    ),
+  )
   const timeLabel = (time: number) => {
     const date = new Date(time).toISOString()
     return interval === 'hour'
@@ -193,6 +223,8 @@ export function NewsTimeline({
         'Bucket start (UTC)',
         'Group',
         'Comparison query',
+        'Line measure',
+        'Line value',
         'Headlines',
         'Scored',
         'Scoring coverage (%)',
@@ -210,6 +242,8 @@ export function NewsTimeline({
         new Date(row.date).toISOString(),
         row.group,
         row.query,
+        NEWS_MEASURE_LABELS[lineMeasure],
+        headlineMeasure(row, lineMeasure),
         row.total,
         row.scored,
         row.total ? (100 * row.scored) / row.total : null,
@@ -228,10 +262,34 @@ export function NewsTimeline({
   return (
     <Panel
       className="news-timeline-panel"
-      title="Headline tone over time"
+      title={
+        lineMeasure === 'score'
+          ? 'Headline tone over time'
+          : lineMeasure === 'volume'
+            ? 'Headline volume over time'
+            : 'Scoring coverage over time'
+      }
       eyebrow={`${intervalLabel.toUpperCase()} PUBLICATION BUCKETS · UTC`}
       action={
-        <div className="news-chart-actions">
+        <div
+          className={`news-chart-actions ${chart !== 'all' ? 'has-comparison' : ''}`}
+        >
+          {chart !== 'all' && (
+            <label>
+              Compare
+              <select
+                aria-label="News comparison measure"
+                value={measure}
+                onChange={(event) => setMeasure(event.target.value)}
+              >
+                {NEWS_MEASURES.map((value) => (
+                  <option key={value} value={value}>
+                    {NEWS_MEASURE_LABELS[value]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             Chart interval
             <select
@@ -337,14 +395,24 @@ export function NewsTimeline({
       {chart !== 'all' &&
         !invalidComparison &&
         timeline.length > 0 &&
-        !comparison.some((row) =>
-          groups.some((group) => row.groups[group.id].score !== null),
-        ) && (
+        !hasComparisonValues && (
           <p className="panel-note" role="status">
-            No scored headlines for the selected{' '}
-            {chart === 'topics' ? 'topics' : 'searches'}. Try different{' '}
-            {chart === 'topics' ? 'topics' : 'queries'} or filters; missing
-            scores do not imply neutral sentiment.
+            {lineMeasure === 'score' ? (
+              <>
+                No scored headlines for the selected{' '}
+                {chart === 'topics' ? 'topics' : 'searches'}. Try different{' '}
+                {chart === 'topics' ? 'topics' : 'queries'} or filters; missing
+                scores do not imply neutral sentiment.
+              </>
+            ) : (
+              <>
+                No matching headlines for the selected{' '}
+                {chart === 'topics' ? 'topics' : 'searches'} in this sample.{' '}
+                {lineMeasure === 'coverage'
+                  ? 'Scoring coverage cannot be calculated without headlines.'
+                  : 'Zero counts describe only the retrieved sample.'}
+              </>
+            )}
           </p>
         )}
       {invalidComparison ? null : timeline.length ? (
@@ -352,11 +420,9 @@ export function NewsTimeline({
           className="news-sentiment-chart"
           role="region"
           aria-label={
-            chart === 'topics'
-              ? `${intervalLabel} headline sentiment by topic`
-              : chart === 'searches'
-                ? `${intervalLabel} headline sentiment by search`
-                : `${intervalLabel} headline volume and mean sentiment score`
+            chart === 'all'
+              ? `${intervalLabel} headline volume and mean sentiment score`
+              : `${intervalLabel} headline ${lineMeasure === 'score' ? 'sentiment' : lineMeasure === 'volume' ? 'volume' : 'scoring coverage'} by ${chart === 'topics' ? 'topic' : 'search'}`
           }
         >
           <ResponsiveContainer width="100%" height={330} minWidth={0}>
@@ -388,14 +454,20 @@ export function NewsTimeline({
                 />
               )}
               <YAxis
-                yAxisId="score"
+                yAxisId="measure"
                 orientation={chart === 'all' ? 'right' : 'left'}
-                domain={[-100, 100]}
+                domain={measureDomain}
+                allowDecimals={lineMeasure !== 'volume'}
+                tickFormatter={(value: number) =>
+                  lineMeasure === 'coverage'
+                    ? `${num(value, 0)}%`
+                    : num(value, 0)
+                }
                 tick={{ fill: '#b8e986', fontSize: 11 }}
-                width={40}
+                width={48}
               />
               <ReferenceLine
-                yAxisId="score"
+                yAxisId="measure"
                 y={0}
                 stroke="#758476"
                 strokeDasharray="3 5"
@@ -429,11 +501,16 @@ export function NewsTimeline({
                             <span
                               style={{ color: COLORS[index % COLORS.length] }}
                             >
-                              {group.name} · {scoreLabel(value.score)}
+                              {group.name} · {measureLabel(value)}
                             </span>
                             <small>
                               {value.scored} scored / {value.total} headlines
                             </small>
+                            {lineMeasure !== 'score' && (
+                              <small>
+                                Mean score: {scoreLabel(value.score)}
+                              </small>
+                            )}
                             <small>
                               {value.positive} positive · {value.negative}{' '}
                               negative · {value.mixed} mixed · {value.unscored}{' '}
@@ -486,7 +563,7 @@ export function NewsTimeline({
                     isAnimationActive={false}
                   />
                   <Line
-                    yAxisId="score"
+                    yAxisId="measure"
                     dataKey="score"
                     name="Mean score (right axis)"
                     stroke="#d3f1ad"
@@ -501,9 +578,9 @@ export function NewsTimeline({
                 groups.map((group, index) => (
                   <Line
                     key={group.id}
-                    yAxisId="score"
+                    yAxisId="measure"
                     dataKey={(row: (typeof comparison)[number]) =>
-                      row.groups[group.id]?.score ?? null
+                      headlineMeasure(row.groups[group.id], lineMeasure)
                     }
                     name={group.name}
                     stroke={COLORS[index]}
@@ -523,11 +600,15 @@ export function NewsTimeline({
         </Empty>
       )}
       <p className="panel-note">
-        {chart === 'topics'
-          ? 'Each line averages scored titles mentioning that topic. Topics can overlap and all current filters apply. A missing score stays unknown; it is never replaced with zero.'
-          : chart === 'searches'
-            ? 'Each line averages scored titles matching its search within the current filters. Searches can overlap. Scores describe the entire headline, not the outlook for a particular company. Missing scores stay unknown, never zero.'
-            : 'Bars count unique headline groups. The line averages only scored titles; no-signal titles are excluded.'}{' '}
+        {chart !== 'all' && lineMeasure === 'volume'
+          ? 'Each line counts unique headline groups matching its topic or search in the retrieved sample, including titles without a scoring cue. Groups can overlap, so their counts must not be added as a market total. A zero means no matches in an otherwise observed bucket; it does not mean no news was published.'
+          : chart !== 'all' && lineMeasure === 'coverage'
+            ? 'Each line shows the percentage of matching headline groups containing a recognized scoring cue. Zero means titles were retrieved but none could be scored; no matching titles means unknown coverage. Coverage describes this English lexicon, not confidence, accuracy or the share of all published news. Groups can overlap.'
+            : chart === 'topics'
+              ? 'Each line averages scored titles mentioning that topic. Topics can overlap and all current filters apply. A missing score stays unknown; it is never replaced with zero.'
+              : chart === 'searches'
+                ? 'Each line averages scored titles matching its search within the current filters. Searches can overlap. Scores describe the entire headline, not the outlook for a particular company. Missing scores stay unknown, never zero.'
+                : 'Bars count unique headline groups. The line averages only scored titles; no-signal titles are excluded.'}{' '}
         Hours and days without retrieved headlines are omitted. The time axis
         preserves elapsed time. The first and last buckets may be partial. This
         feed snapshot is not a historical backtest or a measure of investor
@@ -560,10 +641,22 @@ export function NewsTimeline({
                     <tr>
                       <th>Bucket start (UTC)</th>
                       <th>Group</th>
-                      <th className="right">Headlines</th>
+                      <th
+                        className={`right ${lineMeasure === 'volume' ? 'selected-measure' : ''}`}
+                      >
+                        Headlines
+                      </th>
                       <th className="right">Scored</th>
-                      <th className="right">Coverage</th>
-                      <th className="right">Mean score</th>
+                      <th
+                        className={`right ${lineMeasure === 'coverage' ? 'selected-measure' : ''}`}
+                      >
+                        Coverage
+                      </th>
+                      <th
+                        className={`right ${lineMeasure === 'score' ? 'selected-measure' : ''}`}
+                      >
+                        Mean score
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -573,14 +666,22 @@ export function NewsTimeline({
                         <tr key={`${row.date}:${row.group}`}>
                           <td>{fullTimeLabel(Date.parse(row.date))}</td>
                           <td>{row.group}</td>
-                          <td className="right">{row.total}</td>
+                          <td
+                            className={`right ${lineMeasure === 'volume' ? 'selected-measure' : ''}`}
+                          >
+                            {row.total}
+                          </td>
                           <td className="right">{row.scored}</td>
-                          <td className="right">
+                          <td
+                            className={`right ${lineMeasure === 'coverage' ? 'selected-measure' : ''}`}
+                          >
                             {row.total
                               ? `${num((row.scored / row.total) * 100, 0)}%`
                               : '—'}
                           </td>
-                          <td className="right">
+                          <td
+                            className={`right ${lineMeasure === 'score' ? 'selected-measure' : ''}`}
+                          >
                             {row.score === null ? '—' : scoreLabel(row.score)}
                           </td>
                         </tr>
