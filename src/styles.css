@@ -291,6 +291,23 @@
   color: #bcdf9d;
   background: #293723;
 }
+.async-content {
+  border: 1px solid #354331;
+  border-radius: 8px;
+  background: #162018;
+  margin: 18px 0;
+  padding: 32px 24px;
+  min-height: 170px;
+}
+.async-content p {
+  color: #b3c2ad;
+  margin: 10px 0 18px;
+  font-size: 14px;
+}
+.async-content h2 {
+  font-size: 19px;
+  color: #d8e9cb;
+}
 .news-company-focus {
   margin: 12px 0;
   border: 1px solid #354331;

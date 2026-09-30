@@ -17,7 +17,8 @@ import {
 import type { MarketContext } from '../lib/context'
 import type { Asset, History } from '../lib/types'
 import { Change, Empty, Panel, Stat, Toggle } from '../components/UI'
-import { PerformanceChart, Sparkline } from '../components/Charts'
+import { PerformanceChart } from '../components/Charts'
+import { Sparkline } from '../components/Sparkline'
 import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
 import { companyNewsHref } from '../lib/newsCompanies'
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight,
   Download,
@@ -10,23 +10,31 @@ import {
 import { downloadCSV, num, shortDate } from '../lib/analytics'
 import {
   analyzeHeadlines,
+  HEADLINE_TOPICS,
+  scoreHeadline,
+  summarizeHeadlines,
+} from '../lib/news'
+import {
   DEFAULT_NEWS_SOURCES,
   FEED_SOURCES,
-  HEADLINE_TOPICS,
   NEWS_CATEGORIES,
   NEWS_REGIONS,
   NEWS_SOURCE_MAP,
   NEWS_SOURCES,
-  scoreHeadline,
-  summarizeHeadlines,
-} from '../lib/news'
+} from '../lib/newsSources'
 import type { NewsFeed } from '../lib/news'
 import { useNews } from '../lib/useNews'
 import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
 import { Empty, Panel, Stat } from '../components/UI'
-import { NewsTimeline } from '../components/NewsTimeline'
+import { AsyncContent } from '../components/AsyncContent'
 import { NewsCompanies } from '../components/NewsCompanies'
 import { parseNewsCompanies, stockResearchHref } from '../lib/newsCompanies'
+
+const NewsTimeline = lazy(() =>
+  import('../components/NewsTimeline').then((module) => ({
+    default: module.NewsTimeline,
+  })),
+)
 
 const scoreLabel = (score: number | null) =>
   score === null ? 'No signal' : `${score > 0 ? '+' : ''}${num(score, 0)}`
@@ -672,7 +680,9 @@ export function NewsView({
       )}
       {pane === 'sentiment' && (
         <>
-          <NewsTimeline items={filtered} days={days} feeds={feeds} />
+          <AsyncContent label="Sentiment chart">
+            <NewsTimeline items={filtered} days={days} feeds={feeds} />
+          </AsyncContent>
           <div className="two-col">
             <Panel title="Topics in the conversation">
               <div className="news-topic-bars">

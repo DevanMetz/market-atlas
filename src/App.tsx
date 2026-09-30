@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, useCallback, useEffect, useState } from 'react'
 import {
   Activity,
   ArrowUpRight,
@@ -47,18 +47,48 @@ import {
   PeriodPicker,
   SymbolSearch,
 } from './components/UI'
-import { Sparkline } from './components/Charts'
-import { Comparison, Overview, SectorExplorer } from './views/Overview'
-import { StocksView } from './views/Stocks'
-import { TrendsView } from './views/Trends'
-import { RiskView } from './views/Risk'
-import { NewsView } from './views/News'
-import {
-  Correlations,
-  Methodology,
-  Portfolio,
-  Watchlist,
-} from './views/Research'
+import { Sparkline } from './components/Sparkline'
+import { AsyncContent } from './components/AsyncContent'
+
+const Overview = lazy(() =>
+  import('./views/Overview').then((module) => ({ default: module.Overview })),
+)
+const Comparison = lazy(() =>
+  import('./views/Overview').then((module) => ({ default: module.Comparison })),
+)
+const SectorExplorer = lazy(() =>
+  import('./views/Overview').then((module) => ({
+    default: module.SectorExplorer,
+  })),
+)
+const StocksView = lazy(() =>
+  import('./views/Stocks').then((module) => ({ default: module.StocksView })),
+)
+const TrendsView = lazy(() =>
+  import('./views/Trends').then((module) => ({ default: module.TrendsView })),
+)
+const RiskView = lazy(() =>
+  import('./views/Risk').then((module) => ({ default: module.RiskView })),
+)
+const NewsView = lazy(() =>
+  import('./views/News').then((module) => ({ default: module.NewsView })),
+)
+const Correlations = lazy(() =>
+  import('./views/Research').then((module) => ({
+    default: module.Correlations,
+  })),
+)
+const Methodology = lazy(() =>
+  import('./views/Research').then((module) => ({
+    default: module.Methodology,
+  })),
+)
+const Portfolio = lazy(() =>
+  import('./views/Research').then((module) => ({ default: module.Portfolio })),
+)
+const Watchlist = lazy(() =>
+  import('./views/Research').then((module) => ({ default: module.Watchlist })),
+)
 
 const NAV = [
   { id: 'overview', name: 'Market overview', icon: Grid2X2, tag: '01' },
@@ -449,7 +479,7 @@ export default function App() {
           </a>
           <div className="sidebar-status">
             <span>PUBLIC RESEARCH WORKSPACE</span>
-            <small>Market Atlas · v1.7</small>
+            <small>Market Atlas · v1.8</small>
           </div>
         </div>
       </aside>
@@ -664,23 +694,25 @@ export default function App() {
               )}
             </>
           )}
-          {view === 'overview' && <Overview ctx={ctx} />}
-          {view === 'sectors' && <SectorExplorer ctx={ctx} />}
-          {view === 'compare' && <Comparison ctx={ctx} />}
-          {view === 'trends' && <TrendsView ctx={ctx} />}
-          {view === 'news' && (
-            <NewsView notify={notify} watchlist={watchlist} />
-          )}
-          {view === 'risk' && (
-            <RiskView ctx={ctx} focus={riskFocus} onFocus={setFocus} />
-          )}
-          {view === 'stocks' && (
-            <StocksView ctx={ctx} focus={focus} onFocus={openStock} />
-          )}
-          {view === 'correlations' && <Correlations ctx={ctx} />}
-          {view === 'portfolio' && <Portfolio ctx={ctx} />}
-          {view === 'watchlist' && <Watchlist ctx={ctx} onOpen={openStock} />}
-          {view === 'methodology' && <Methodology />}
+          <AsyncContent key={view} label={META[view].title}>
+            {view === 'overview' && <Overview ctx={ctx} />}
+            {view === 'sectors' && <SectorExplorer ctx={ctx} />}
+            {view === 'compare' && <Comparison ctx={ctx} />}
+            {view === 'trends' && <TrendsView ctx={ctx} />}
+            {view === 'news' && (
+              <NewsView notify={notify} watchlist={watchlist} />
+            )}
+            {view === 'risk' && (
+              <RiskView ctx={ctx} focus={riskFocus} onFocus={setFocus} />
+            )}
+            {view === 'stocks' && (
+              <StocksView ctx={ctx} focus={focus} onFocus={openStock} />
+            )}
+            {view === 'correlations' && <Correlations ctx={ctx} />}
+            {view === 'portfolio' && <Portfolio ctx={ctx} />}
+            {view === 'watchlist' && <Watchlist ctx={ctx} onOpen={openStock} />}
+            {view === 'methodology' && <Methodology />}
+          </AsyncContent>
           <footer>
             <div>
               <span className="footer-mark">

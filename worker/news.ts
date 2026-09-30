@@ -1,4 +1,4 @@
-import { FEED_SOURCES, NEWS_SOURCE_MAP } from '../src/lib/news'
+import { FEED_SOURCES, NEWS_SOURCE_MAP } from '../src/lib/newsSources'
 import type { NewsFeed, NewsItem, NewsResponse } from '../src/lib/news'
 
 const MAX_BYTES = 2 * 1024 * 1024

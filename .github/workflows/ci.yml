@@ -36,7 +36,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: news-ui-preview
-          path: test-results/news-*.png
+          path: |
+            test-results/news-*.png
+            test-results/news-load-metrics.json
           retention-days: 7
       - uses: actions/upload-artifact@v4
         if: failure()

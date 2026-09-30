@@ -1,13 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   analyzeHeadlines,
-  FEED_SOURCES,
   headlineTimeline,
   headlineTopicTimeline,
-  NEWS_SOURCES,
   scoreHeadline,
   summarizeHeadlines,
 } from './news'
+import { FEED_SOURCES, NEWS_SOURCES } from './newsSources'
 import type { NewsFeed, NewsItem } from './news'
 import {
   newsResponse,

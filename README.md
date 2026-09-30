@@ -39,6 +39,8 @@ npx playwright test
 
 The browser suite uses a locally installed Chrome by default. Set `PLAYWRIGHT_CHANNEL` if another Playwright browser channel is needed. Start `npm run preview` before running it. Browser tests use deterministic, clearly identified test-only fixtures for reproducibility; production has no mock market data. Live endpoint validation is a separate deployment check.
 
+Research views load on demand. Reading headlines or browsing the source directory does not download the chart library or fetch price history; opening Sentiment Lab loads its chart separately. The small SVG benchmark sparklines do not depend on Recharts. Loading and error boundaries keep navigation available during a delayed or failed page download, and reloading retries with the current assets. Browser tests verify these requests, preserved URL filters and recovery flows against the production build, using Vite's build manifest. The feed API imports only the source catalog, avoiding initialization of the client sentiment and company-matching rules.
+
 ## Deploy to Cloudflare
 
 ```sh

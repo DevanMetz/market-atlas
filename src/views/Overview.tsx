@@ -17,11 +17,8 @@ import {
 import type { MarketContext } from '../lib/context'
 import type { History, Period, TimeWindow } from '../lib/types'
 import { Change, Panel, Stat, SymbolChips } from '../components/UI'
-import {
-  PerformanceChart,
-  RotationChart,
-  Sparkline,
-} from '../components/Charts'
+import { PerformanceChart, RotationChart } from '../components/Charts'
+import { Sparkline } from '../components/Sparkline'
 
 export function SectorHeatmap({
   ctx,
