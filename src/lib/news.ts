@@ -366,15 +366,33 @@ export function headlineMeasure(
   return sample.score
 }
 
+export function headlineBucketTime(
+  publishedAt: string | null,
+  interval: NewsInterval,
+): number | null {
+  const time = publishedAt ? Date.parse(publishedAt) : NaN
+  if (!Number.isFinite(time)) return null
+  const duration = interval === 'hour' ? 3600000 : 86400000
+  return Math.floor(time / duration) * duration
+}
+
+export function headlinesInBucket(
+  items: AnalyzedHeadline[],
+  time: number,
+  interval: NewsInterval,
+) {
+  return items.filter(
+    (item) => headlineBucketTime(item.publishedAt, interval) === time,
+  )
+}
+
 function headlineBuckets(items: AnalyzedHeadline[], interval: NewsInterval) {
   const groups = new Map<string, AnalyzedHeadline[]>()
   for (const item of items) {
-    if (!item.publishedAt) continue
-    const time = Date.parse(item.publishedAt)
-    if (!Number.isFinite(time)) continue
+    const time = headlineBucketTime(item.publishedAt, interval)
+    if (time === null) continue
     const utc = new Date(time).toISOString()
-    const date =
-      interval === 'hour' ? `${utc.slice(0, 13)}:00:00.000Z` : utc.slice(0, 10)
+    const date = interval === 'hour' ? utc : utc.slice(0, 10)
     const group = groups.get(date)
     if (group) group.push(item)
     else groups.set(date, [item])

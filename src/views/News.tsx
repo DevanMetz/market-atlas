@@ -7,7 +7,7 @@ import {
   Search,
   SlidersHorizontal,
 } from 'lucide-react'
-import { downloadCSV, num, shortDate } from '../lib/analytics'
+import { downloadCSV, num } from '../lib/analytics'
 import {
   analyzeHeadlines,
   HEADLINE_TOPICS,
@@ -33,7 +33,13 @@ import {
   compileHeadlineSearch,
   headlineSearchDocument,
 } from '../lib/newsSearch'
-import { parseNewsCompanies, stockResearchHref } from '../lib/newsCompanies'
+import { parseNewsCompanies } from '../lib/newsCompanies'
+import {
+  NewsHeadline,
+  SentimentBadge,
+  headlineDate,
+  scoreLabel,
+} from '../components/NewsHeadline'
 
 const NewsTimeline = lazy(() =>
   import('../components/NewsTimeline').then((module) => ({
@@ -41,8 +47,6 @@ const NewsTimeline = lazy(() =>
   })),
 )
 
-const scoreLabel = (score: number | null) =>
-  score === null ? 'No signal' : `${score > 0 ? '+' : ''}${num(score, 0)}`
 const TONES = ['all', 'positive', 'negative', 'mixed', 'unscored'] as const
 const validFeeds = (value: string) => {
   const ids = value.split(',')
@@ -52,20 +56,6 @@ const validFeeds = (value: string) => {
     ids.every((id) => FEED_SOURCES.some((s) => s.id === id))
   )
 }
-const headlineDate = (value: string | null) =>
-  value
-    ? `${shortDate(value)} · ${new Date(value).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC`
-    : 'Publication time unavailable'
-
-function SentimentBadge({ item }: { item: ReturnType<typeof scoreHeadline> }) {
-  return (
-    <span className={`news-tone tone-${item.tone}`}>
-      {item.tone === 'unscored' ? 'No signal' : item.tone}{' '}
-      {item.score !== null && <b>{scoreLabel(item.score)}</b>}
-    </span>
-  )
-}
-
 export function NewsView({
   notify,
   watchlist,
@@ -569,95 +559,12 @@ export function NewsView({
             {filtered
               .slice(currentPage * 30, currentPage * 30 + 30)
               .map((item) => (
-                <article
-                  className="headline-card"
+                <NewsHeadline
                   key={`${item.sourceId}:${item.url}`}
-                >
-                  <div className="headline-meta">
-                    <a
-                      href={NEWS_SOURCE_MAP.get(item.sourceId)?.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {NEWS_SOURCE_MAP.get(item.sourceId)?.name}
-                    </a>
-                    <time dateTime={item.publishedAt ?? undefined}>
-                      {headlineDate(item.publishedAt)}
-                    </time>
-                    {news.feeds[item.sourceId]?.stale && (
-                      <span className="ongoing-badge">Cached feed</span>
-                    )}
-                  </div>
-                  <div className="headline-title">
-                    <h3>
-                      <a href={item.url} target="_blank" rel="noreferrer">
-                        {item.title}
-                        <ArrowUpRight size={15} aria-hidden="true" />
-                      </a>
-                    </h3>
-                    <SentimentBadge item={item} />
-                  </div>
-                  <div className="headline-tags">
-                    {item.topics.slice(0, 3).map((name) => (
-                      <button key={name} onClick={() => setTopic(name)}>
-                        {name}
-                      </button>
-                    ))}
-                    {item.tickers.map((ticker) => (
-                      <a
-                        key={ticker}
-                        className="ticker-link"
-                        aria-label={`Research ${ticker}`}
-                        href={stockResearchHref(ticker, window.location.search)}
-                      >
-                        ${ticker} ↗
-                      </a>
-                    ))}
-                  </div>
-                  <details className="headline-explanation">
-                    <summary>
-                      {item.matches.length
-                        ? `${item.matches.length} scoring cues`
-                        : 'Why no signal?'}
-                      {item.copies.length > 1
-                        ? ` · ${item.copies.length} grouped copies`
-                        : ''}
-                    </summary>
-                    <p>
-                      {item.matches.length
-                        ? item.matches
-                            .map(
-                              (match) =>
-                                `${match.term} (${match.weight > 0 ? '+' : ''}${match.weight}${match.negated ? ', negation applied' : ''})`,
-                            )
-                            .join(' · ')
-                        : 'No words or phrases in the current English lexicon were matched. This does not mean the story is neutral.'}
-                    </p>
-                    {item.mentions.length > 0 && (
-                      <p>
-                        Company matches in this headline group:{' '}
-                        {item.mentions
-                          .map(
-                            (mention) =>
-                              `${mention.symbol} via “${mention.text}” (${mention.kind})`,
-                          )
-                          .join(' · ')}
-                        . Name matches are inferred and may be ambiguous.
-                      </p>
-                    )}
-                    {item.copies.length > 1 && (
-                      <ul>
-                        {item.copies.map((copy) => (
-                          <li key={`${copy.sourceId}:${copy.url}`}>
-                            <a href={copy.url} target="_blank" rel="noreferrer">
-                              {NEWS_SOURCE_MAP.get(copy.sourceId)?.name} ↗
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </details>
-                </article>
+                  item={item}
+                  stale={news.feeds[item.sourceId]?.stale}
+                  onTopic={setTopic}
+                />
               ))}
           </div>
           {!filtered.length && (

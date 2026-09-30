@@ -958,6 +958,329 @@ test('zero-coverage samples plot as zero while empty comparisons remain unknown'
   ).toBeDisabled()
 })
 
+test('the headline inspector supports keyboard access, exact exports and changing common filters', async ({
+  page,
+}) => {
+  let newsRequests = 0
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/news') newsRequests++
+  })
+  await page.goto(
+    '/?view=news&newsTab=sentiment&feeds=bbc,cnbc&days=all&newsInterval=hour',
+  )
+  const launch = page.getByRole('button', {
+    name: 'Inspect chart headlines',
+    exact: true,
+  })
+  await expect(launch).toBeEnabled()
+  const initialRequests = newsRequests
+  await launch.focus()
+  await launch.press('Enter')
+  const inspector = page.getByRole('region', {
+    name: 'Headlines behind chart',
+    exact: true,
+  })
+  await expect(inspector).toBeFocused()
+  await expect(inspector.locator('.headline-card')).toHaveCount(2)
+  await expect(inspector).toContainText('Nvidia shares rally')
+  await expect(inspector).toContainText('Board schedules annual meeting')
+  await expect(inspector).not.toContainText(
+    'Market snapshot without publication time',
+  )
+  await expect(
+    inspector.locator('.news-inspector-stats dd').first(),
+  ).toHaveText('2')
+  await expect(inspector.locator('.news-inspector-stats dd').nth(1)).toHaveText(
+    '1',
+  )
+  await expect(inspector.locator('.news-inspector-stats dd').nth(3)).toHaveText(
+    '50.0%',
+  )
+  const downloadEvent = page.waitForEvent('download')
+  await inspector
+    .getByRole('button', { name: 'Export these headlines', exact: true })
+    .click()
+  const download = await downloadEvent
+  expect(download.suggestedFilename()).toBe(
+    'market-atlas-news-inspected-headlines.csv',
+  )
+  const csv = await readFile((await download.path())!, 'utf8')
+  expect(csv.trim().split(/\r?\n/)).toHaveLength(3)
+  expect(csv).toContain(
+    '"Bucket start (UTC)","Bucket interval","Comparison","Comparison query"',
+  )
+  expect(csv).toContain('Nvidia shares rally')
+  expect(csv).toContain('Board schedules annual meeting')
+  expect(csv).not.toContain('Apple posts earnings growth')
+  expect(csv).toContain('CNBC: https://example.org/cnbc/news-0')
+  expect(csv).toContain('bbc: ')
+  expect(csv).toContain('cnbc: ')
+  expect(csv).toContain('newsInterval=hour')
+  expect(newsRequests).toBe(initialRequests)
+  await page.locator('.news-advanced summary').click()
+  await page.getByLabel('Headline sentiment filter').selectOption('positive')
+  await expect(inspector.locator('.headline-card')).toHaveCount(1)
+  await expect(inspector).toContainText('Nvidia shares rally')
+  await page.getByLabel('Search news headlines').fill('Apple')
+  await expect(
+    inspector.getByRole('heading', { name: 'No headlines in this selection' }),
+  ).toBeVisible()
+  await expect(inspector.locator('.headline-card')).toHaveCount(0)
+  await expect(inspector.locator('.news-inspector-stats dd')).toHaveText([
+    '0',
+    '0',
+    'No signal',
+    '—',
+  ])
+  await expect(
+    inspector.getByRole('button', { name: 'Export these headlines' }),
+  ).toBeDisabled()
+  await expect(
+    inspector.getByLabel('Inspected news interval').locator('option:checked'),
+  ).toContainText('no headlines now')
+  await inspector.getByLabel('Inspected news interval').focus()
+  await inspector
+    .getByLabel('Inspected news interval')
+    .selectOption({ index: 1 })
+  await expect(inspector.getByLabel('Inspected news interval')).toBeFocused()
+  await expect(inspector.locator('.headline-card')).toHaveCount(1)
+  await expect(inspector).toContainText('Apple posts earnings growth')
+  await inspector
+    .getByRole('button', { name: 'Close headline inspector' })
+    .click()
+  await expect(inspector).toHaveCount(0)
+  await expect(launch).toBeFocused()
+})
+
+test('comparison rows inspect the matching publishers and preserve zero coverage versus missing samples', async ({
+  page,
+}) => {
+  const params = new URLSearchParams({
+    view: 'news',
+    newsTab: 'sentiment',
+    feeds: 'bbc,cnbc',
+    days: '1',
+    newsChart: 'searches',
+    newsMeasure: 'coverage',
+    newsSearches: JSON.stringify([
+      { name: 'CNBC rally', query: 'source:CNBC title:rally' },
+      { name: 'Meetings', query: 'title:meeting' },
+      { name: 'Absent', query: 'title:zzzznothing' },
+    ]),
+  })
+  await page.goto('/?' + params)
+  await page.locator('.news-chart-data summary').click()
+  await page
+    .getByRole('button', { name: /^Inspect CNBC rally at/ })
+    .last()
+    .click()
+  const inspector = page.getByRole('region', {
+    name: 'Headlines behind chart',
+    exact: true,
+  })
+  await expect(inspector).toBeFocused()
+  await expect(inspector.getByLabel('Inspected headline group')).toHaveValue(
+    'search-0',
+  )
+  await expect(inspector.locator('.headline-card')).toHaveCount(1)
+  await expect(inspector).toContainText('Nvidia shares rally')
+  await inspector.locator('.headline-explanation summary').click()
+  await expect(inspector.locator('.headline-explanation')).toContainText(
+    '2 grouped copies',
+  )
+  await expect(
+    inspector.getByRole('link', { name: 'CNBC ↗', exact: true }),
+  ).toHaveAttribute('href', 'https://example.org/cnbc/news-0')
+  await inspector.screenshot({
+    path: 'test-results/news-inspector-desktop.png',
+  })
+  await inspector
+    .getByLabel('Inspected headline group')
+    .selectOption('search-1')
+  await expect(inspector.locator('.headline-card')).toHaveCount(1)
+  await expect(inspector).toContainText('Board schedules annual meeting')
+  await expect(inspector.locator('.news-inspector-stats dd')).toHaveText([
+    '1',
+    '0',
+    'No signal',
+    '0.0%',
+  ])
+  await inspector
+    .getByLabel('Inspected headline group')
+    .selectOption('search-2')
+  await expect(inspector.locator('.headline-card')).toHaveCount(0)
+  await expect(inspector.locator('.news-inspector-stats dd').last()).toHaveText(
+    '—',
+  )
+  await inspector
+    .getByLabel('Inspected headline group')
+    .selectOption('search-1')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390)
+  await inspector.screenshot({ path: 'test-results/news-inspector-mobile.png' })
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .disableRules(['color-contrast'])
+    .analyze()
+  expect(
+    accessibility.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    ),
+  ).toEqual([])
+  await page.getByLabel('Comparison 2 query').fill('title:earnings')
+  await expect(inspector).toHaveCount(0)
+  await page
+    .getByRole('button', { name: 'Inspect chart headlines', exact: true })
+    .click()
+  await expect(inspector).toBeVisible()
+  await page.getByLabel('Comparison 2 query').fill('title:')
+  await expect(inspector).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'Inspect chart headlines', exact: true }),
+  ).toHaveCount(0)
+})
+
+test('chart clicks select their observed interval and topic inspection survives measure changes only', async ({
+  page,
+}) => {
+  await page.goto('/?view=news&newsTab=sentiment&feeds=bbc,cnbc&days=1')
+  const point = page
+    .locator('.news-sentiment-chart .recharts-line-dots .recharts-dot')
+    .first()
+  await point.hover()
+  const intervalLabel = await page
+    .locator('.news-chart-tooltip > strong')
+    .innerText()
+  await point.click()
+  const inspector = page.getByRole('region', {
+    name: 'Headlines behind chart',
+    exact: true,
+  })
+  await expect(inspector).toBeVisible()
+  await expect(
+    inspector.getByLabel('Inspected news interval').locator('option:checked'),
+  ).toHaveText(intervalLabel)
+  await expect(inspector.getByLabel('Inspected headline group')).toHaveValue(
+    'all',
+  )
+  await expect(inspector.locator('.headline-card')).toHaveCount(1)
+  await expect(inspector).toContainText('Stocks rise while oil prices fall')
+  await page
+    .getByRole('button', { name: 'Compare topics', exact: true })
+    .click()
+  await expect(inspector).toHaveCount(0)
+  await page.locator('.news-chart-data summary').click()
+  await page
+    .getByRole('button', { name: /^Inspect Technology at/ })
+    .last()
+    .click()
+  await expect(inspector.getByLabel('Inspected headline group')).toHaveValue(
+    'Technology',
+  )
+  await expect(inspector.locator('.headline-card')).toHaveCount(1)
+  await expect(inspector).toContainText('Nvidia shares rally')
+  await page.getByLabel('News comparison measure').selectOption('volume')
+  await expect(inspector).toBeVisible()
+  await expect(inspector.getByLabel('Inspected headline group')).toHaveValue(
+    'Technology',
+  )
+  const downloadEvent = page.waitForEvent('download')
+  await inspector
+    .getByRole('button', { name: 'Export these headlines', exact: true })
+    .click()
+  const csv = await readFile((await (await downloadEvent).path())!, 'utf8')
+  expect(csv).toContain('"Technology","","Technology"')
+  expect(csv.trim().split(/\r?\n/)).toHaveLength(2)
+  await page.getByLabel('News chart interval').selectOption('day')
+  await expect(inspector).toHaveCount(0)
+})
+
+test('inspected headlines paginate the full sample and recompute after feed refreshes', async ({
+  page,
+}) => {
+  await page.unroute('**/api/news?*')
+  let count = 17
+  const publishedAt = new Date(Date.now() - 3600000).toISOString()
+  await page.route('**/api/news?*', (route) =>
+    route.fulfill({
+      json: {
+        feeds: [
+          {
+            sourceId: 'bbc',
+            fetchedAt: new Date().toISOString(),
+            stale: true,
+            items: Array.from({ length: count }, (_, i) => ({
+              title: `Nvidia shares rally in inspected synthetic case ${i}`,
+              url: `https://example.org/inspect-${i}`,
+              sourceId: 'bbc',
+              publishedAt,
+            })),
+          },
+        ],
+        errors: [],
+      },
+    }),
+  )
+  await page.goto('/?view=news&newsTab=sentiment&feeds=bbc&days=1')
+  await page
+    .getByRole('button', { name: 'Inspect chart headlines', exact: true })
+    .click()
+  const inspector = page.getByRole('region', {
+    name: 'Headlines behind chart',
+    exact: true,
+  })
+  await expect(inspector.locator('.headline-card')).toHaveCount(8)
+  await expect(inspector.locator('.table-footer')).toContainText(
+    '1–8 of 17 headline groups',
+  )
+  await expect(inspector.locator('.headline-card').first()).toContainText(
+    'Cached feed',
+  )
+  await inspector
+    .getByRole('button', { name: 'Next inspected headlines page' })
+    .click()
+  await expect(inspector.locator('.table-footer')).toContainText(
+    '9–16 of 17 headline groups',
+  )
+  const downloadEvent = page.waitForEvent('download')
+  await inspector
+    .getByRole('button', { name: 'Export these headlines', exact: true })
+    .click()
+  const csv = await readFile((await (await downloadEvent).path())!, 'utf8')
+  expect(csv.trim().split(/\r?\n/)).toHaveLength(18)
+  expect(csv).toContain('(stale cache)')
+  await inspector
+    .getByRole('button', { name: 'Next inspected headlines page' })
+    .click()
+  await expect(inspector.locator('.headline-card')).toHaveCount(1)
+  await expect(inspector.locator('.table-footer')).toContainText(
+    '17–17 of 17 headline groups',
+  )
+  await expect(
+    inspector.getByRole('button', { name: 'Next inspected headlines page' }),
+  ).toBeDisabled()
+  count = 1
+  await page
+    .getByRole('button', { name: 'Refresh headlines', exact: true })
+    .click()
+  await expect(inspector.locator('.table-footer')).toContainText(
+    '1–1 of 1 headline groups',
+  )
+  await expect(inspector.locator('.headline-card')).toHaveCount(1)
+  await expect(inspector).toContainText('synthetic case 0')
+  await expect(inspector).not.toContainText('synthetic case 16')
+  count = 0
+  await page
+    .getByRole('button', { name: 'Refresh headlines', exact: true })
+    .click()
+  await expect(inspector.locator('.headline-card')).toHaveCount(0)
+  await expect(
+    inspector.getByRole('heading', { name: 'No headlines in this selection' }),
+  ).toBeVisible()
+})
+
 test('failed news feeds remain visible without fabricated headlines', async ({
   page,
 }) => {

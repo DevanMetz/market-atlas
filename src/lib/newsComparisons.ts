@@ -1,4 +1,8 @@
-import { headlineGroupTimeline } from './news'
+import {
+  headlineGroupTimeline,
+  headlinesInBucket,
+  summarizeHeadlines,
+} from './news'
 import type { AnalyzedHeadline, NewsInterval } from './news'
 import {
   compileHeadlineSearch,
@@ -12,6 +16,27 @@ export const DEFAULT_NEWS_COMPARISONS: NewsComparison[] = [
   { name: 'Nvidia', query: 'ticker:NVDA' },
   { name: 'Apple', query: 'ticker:AAPL' },
 ]
+
+export function headlineBucketSample(
+  items: AnalyzedHeadline[],
+  time: number,
+  interval: NewsInterval,
+  filter: { topic?: string; query?: string } = {},
+) {
+  const search = compileHeadlineSearch(filter.query ?? '')
+  const selected = search.error
+    ? []
+    : headlinesInBucket(items, time, interval).filter(
+        (item) =>
+          (!filter.topic || item.topics.includes(filter.topic)) &&
+          search.matches(headlineSearchDocument(item)),
+      )
+  return {
+    items: selected,
+    summary: summarizeHeadlines(selected),
+    error: search.error,
+  }
+}
 
 // Validate the URL structure separately from editable query and name errors.
 export function parseNewsComparisons(value: string): NewsComparison[] | null {

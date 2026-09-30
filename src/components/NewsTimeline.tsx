@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 import {
   Bar,
@@ -25,6 +25,9 @@ import type { AnalyzedHeadline, NewsFeed } from '../lib/news'
 import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
 import { Empty, Panel } from './UI'
 import { NewsComparisonEditor } from './NewsComparisonEditor'
+import { NewsBucketDetails } from './NewsBucketDetails'
+import type { NewsInspectionGroup } from './NewsBucketDetails'
+import { scoreLabel } from './NewsHeadline'
 import {
   compareHeadlineSearches,
   DEFAULT_NEWS_COMPARISONS,
@@ -33,8 +36,6 @@ import {
 
 const COLORS = ['#d3f1ad', '#80bdd4', '#e0b881', '#c3a0df']
 const DEFAULT_TOPICS = 'Technology,Financials,Energy,Macro & policy'
-const scoreLabel = (score: number | null) =>
-  score === null ? 'No signal' : `${score > 0 ? '+' : ''}${num(score, 0)}`
 const validTopics = (value: string) => {
   const topics = value.split(',')
   return (
@@ -118,6 +119,43 @@ export function NewsTimeline({
         : topics.map((topic) => ({ id: topic, name: topic, query: '' })),
     [chart, searches, topics],
   )
+  const inspectionGroups = useMemo<NewsInspectionGroup[]>(
+    () => [
+      { id: 'all', name: 'All matching headlines' },
+      ...(chart === 'all'
+        ? []
+        : groups.map((group) => ({
+            ...group,
+            ...(chart === 'topics' ? { topic: group.id } : {}),
+          }))),
+    ],
+    [chart, groups],
+  )
+  const inspectionScope = JSON.stringify([interval, inspectionGroups])
+  const [selectedInspection, setSelectedInspection] = useState<{
+    time: number
+    groupId: string
+    scope: string
+  } | null>(null)
+  const inspection =
+    selectedInspection?.scope === inspectionScope ? selectedInspection : null
+  const inspectedGroup = inspectionGroups.find(
+    (group) => group.id === inspection?.groupId,
+  )
+  const inspectionRef = useRef<HTMLDivElement>(null)
+  const inspectButtonRef = useRef<HTMLButtonElement>(null)
+  const focusInspection = useRef(false)
+  useEffect(() => setSelectedInspection(null), [inspectionScope])
+  useEffect(() => {
+    if (inspection && focusInspection.current) {
+      inspectionRef.current?.focus()
+      focusInspection.current = false
+    }
+  }, [inspection])
+  const inspect = (time: number, groupId: string, focus = true) => {
+    focusInspection.current = focus
+    setSelectedInspection({ time, groupId, scope: inspectionScope })
+  }
   const comparison = useMemo(
     () =>
       chart === 'searches'
@@ -150,6 +188,7 @@ export function NewsTimeline({
         ? comparison.flatMap((row) =>
             groups.map((group) => ({
               date: row.date,
+              groupId: group.id,
               group: group.name,
               query: group.query,
               ...row.groups[group.id],
@@ -157,6 +196,7 @@ export function NewsTimeline({
           )
         : timeline.map((row) => ({
             ...row,
+            groupId: 'all',
             group: 'All matching headlines',
             query: '',
           })),
@@ -430,6 +470,12 @@ export function NewsTimeline({
               data={chartData}
               margin={{ top: 20, left: 2, right: 8, bottom: 8 }}
               accessibilityLayer
+              onClick={({ activeLabel, isTooltipActive }) => {
+                if (!isTooltipActive || activeLabel === undefined) return
+                const time = Number(activeLabel)
+                if (timeline.some((row) => row.time === time))
+                  inspect(time, inspection?.groupId ?? 'all')
+              }}
             >
               <CartesianGrid
                 stroke="#2a3330"
@@ -519,6 +565,9 @@ export function NewsTimeline({
                           </p>
                         )
                       })}
+                      <small className="news-chart-inspect-hint">
+                        Click the chart to inspect this interval.
+                      </small>
                     </div>
                   )
                 }}
@@ -615,6 +664,54 @@ export function NewsTimeline({
         sentiment.
       </p>
       {!invalidComparison && (
+        <>
+          <div className="news-inspector-launch">
+            <button
+              className="button"
+              ref={inspectButtonRef}
+              disabled={!timeline.length}
+              onClick={() =>
+                inspect(
+                  timeline[timeline.length - 1].time,
+                  inspection?.groupId ?? 'all',
+                )
+              }
+            >
+              Inspect chart headlines
+            </button>
+            <span>
+              Choose a chart interval, then a headline group. You can also use
+              “Inspect” in the data table.
+            </span>
+          </div>
+          {inspection && inspectedGroup && (
+            <div
+              className="news-bucket-inspector"
+              role="region"
+              aria-label="Headlines behind chart"
+              tabIndex={-1}
+              ref={inspectionRef}
+            >
+              <NewsBucketDetails
+                items={items}
+                feeds={feeds}
+                time={inspection.time}
+                interval={interval}
+                group={inspectedGroup}
+                groups={inspectionGroups}
+                buckets={timeline.map((row) => row.time)}
+                timeLabel={fullTimeLabel}
+                onChange={(time, groupId) => inspect(time, groupId, false)}
+                onClose={() => {
+                  setSelectedInspection(null)
+                  inspectButtonRef.current?.focus()
+                }}
+              />
+            </div>
+          )}
+        </>
+      )}
+      {!invalidComparison && (
         <details
           className="news-chart-data"
           onToggle={(event) => setShowData(event.currentTarget.open)}
@@ -657,6 +754,7 @@ export function NewsTimeline({
                       >
                         Mean score
                       </th>
+                      <th>Explore</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -683,6 +781,17 @@ export function NewsTimeline({
                             className={`right ${lineMeasure === 'score' ? 'selected-measure' : ''}`}
                           >
                             {row.score === null ? '—' : scoreLabel(row.score)}
+                          </td>
+                          <td>
+                            <button
+                              className="text-button"
+                              aria-label={`Inspect ${row.group} at ${fullTimeLabel(Date.parse(row.date))}`}
+                              onClick={() =>
+                                inspect(Date.parse(row.date), row.groupId)
+                              }
+                            >
+                              Inspect
+                            </button>
                           </td>
                         </tr>
                       ))}

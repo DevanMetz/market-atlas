@@ -48,6 +48,14 @@ A bucket containing unscored titles has zero scoring coverage and an unknown mea
 
 The selected comparison measure persists across topic/search modes, shared links and saved views. The all-headline view retains its volume bars and mean-score line. Exports include the line measure and plotted value alongside every underlying metric, query, research URL and feed timestamp; the chart data table highlights the selected measure.
 
+### Inspect the headlines behind a chart
+
+Click a chart interval, use **Inspect chart headlines**, or choose **Inspect** on a data-table row to see the titles behind that sample. Keyboard-accessible selectors cover every observed interval, including intervals outside the table's latest 24. The inspector can show the whole interval or one topic/custom search without changing the common filters. A chart click starts with all matching headlines unless an inspection group is already selected; a table action selects that row's exact group.
+
+The inspector uses the same UTC bucket boundaries, grouped headlines and search rules as the chart. It includes unscored titles, shows the scored count, mean and coverage, and exposes scoring cues, company-match evidence and each publisher's original link. Eight headline groups appear per page; **Export these headlines** exports the entire selected sample with its UTC bucket, comparison query/topic, scoring cues, grouped publisher links, retrieval timestamps, current research URL and export time.
+
+Filters and refreshed feeds recompute the open sample. A now-empty interval stays visibly empty rather than switching to another interval or retaining old headlines. Changing the chart interval or comparison definitions closes the inspector; switching the plotted measure keeps it open. Inspection is temporary page state, while the surrounding chart settings remain shareable. CSVs record the precise inspected interval and group. No article text is downloaded, and opening the inspector makes no additional feed request.
+
 ## Develop
 
 Requires Node.js 22 or newer and npm.

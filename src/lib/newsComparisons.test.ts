@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeHeadlines, headlineMeasure } from './news'
+import { analyzeHeadlines, headlineMeasure, headlineTimeline } from './news'
 import type { NewsItem } from './news'
 import {
   compareHeadlineSearches,
+  headlineBucketSample,
   DEFAULT_NEWS_COMPARISONS,
   parseNewsComparisons,
 } from './newsComparisons'
@@ -54,6 +55,122 @@ const items: NewsItem[] = [
 const headlines = analyzeHeadlines([
   { sourceId: 'bbc', items, fetchedAt: '2026-09-30T14:00:00Z' },
 ])
+
+describe('headlines behind chart intervals', () => {
+  it('reproduces the chart sample with grouped copies and unscored titles intact', () => {
+    const time = Date.parse('2026-09-30T10:00:00Z')
+    const sample = headlineBucketSample(headlines, time, 'hour')
+    expect(sample.items.map((item) => item.title).sort()).toEqual([
+      'Apple schedules meeting',
+      'Nvidia shares rally',
+    ])
+    expect(
+      sample.items.find((item) => item.tickers.includes('NVDA'))?.copies,
+    ).toHaveLength(2)
+    const {
+      date: _date,
+      time: _time,
+      ...expected
+    } = headlineTimeline(headlines, 'hour')[0]
+    expect(sample.summary).toEqual(expected)
+    expect(sample.summary).toMatchObject({
+      total: 2,
+      scored: 1,
+      unscored: 1,
+      score: 40,
+    })
+  })
+
+  it('uses the same topic and compound-query membership as plotted comparisons', () => {
+    const comparisons = [
+      {
+        name: 'CNBC Nvidia',
+        query: 'source:CNBC (ticker:NVDA OR ticker:AAPL) -title:meeting',
+      },
+      { name: 'All', query: '' },
+    ]
+    const chart = compareHeadlineSearches(
+      headlines,
+      comparisons,
+      'hour',
+    ).timeline
+    for (const row of chart) {
+      const sample = headlineBucketSample(
+        headlines,
+        row.time,
+        'hour',
+        comparisons[0],
+      )
+      expect(sample.summary).toEqual(row.groups['search-0'])
+    }
+    const sample = headlineBucketSample(headlines, chart[0].time, 'hour', {
+      topic: 'Technology',
+    })
+    expect(sample.items.map((item) => item.title).sort()).toEqual([
+      'Apple schedules meeting',
+      'Nvidia shares rally',
+    ])
+  })
+
+  it('respects the common filtered sample and keeps invalid or absent comparisons empty', () => {
+    const filtered = headlines.filter((item) => item.tickers.includes('AAPL'))
+    const time = Date.parse('2026-09-30T10:00:00Z')
+    expect(headlineBucketSample(filtered, time, 'hour').summary).toMatchObject({
+      total: 1,
+      scored: 0,
+      score: null,
+    })
+    const absent = headlineBucketSample(filtered, time, 'hour', {
+      query: 'ticker:NVDA',
+    })
+    expect(absent.summary).toMatchObject({ total: 0, scored: 0, score: null })
+    expect(
+      headlineBucketSample(filtered, time, 'hour', { query: 'earnings OR' }),
+    ).toMatchObject({ items: [], error: expect.any(String) })
+    expect(
+      headlineBucketSample(headlines, time + 1800000, 'hour').items,
+    ).toEqual([])
+  })
+
+  it('shares exact UTC boundaries with the chart and excludes unknown publication times', () => {
+    const shifted = analyzeHeadlines([
+      {
+        sourceId: 'bbc',
+        fetchedAt: '2026-10-01T02:00:00Z',
+        items: [
+          {
+            ...items[0],
+            title: 'Prior day',
+            url: 'https://example.org/before',
+            publishedAt: '2026-09-30T18:59:59-05:00',
+          },
+          {
+            ...items[0],
+            title: 'Next day',
+            url: 'https://example.org/after',
+            publishedAt: '2026-09-30T19:00:00-05:00',
+          },
+          items[5],
+          items[6],
+        ],
+      },
+    ])
+    const time = Date.parse('2026-10-01T00:00:00Z')
+    expect(
+      headlineBucketSample(shifted, time, 'day').items.map(
+        (item) => item.title,
+      ),
+    ).toEqual(['Next day'])
+    expect(
+      headlineBucketSample(shifted, time, 'hour').items.map(
+        (item) => item.title,
+      ),
+    ).toEqual(['Next day'])
+    expect(headlineTimeline(shifted, 'day').map((row) => row.total)).toEqual([
+      1, 1,
+    ])
+  })
+})
 
 describe('custom news comparisons', () => {
   it('keeps zero volume, zero scoring coverage and unknown scores distinct', () => {
