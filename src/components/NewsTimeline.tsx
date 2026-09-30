@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import type { Ref } from 'react'
 import { Download } from 'lucide-react'
 import {
   Bar,
@@ -11,6 +18,9 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  getRelativeCoordinate,
+  usePlotArea,
+  useXAxisInverseDataSnapScale,
 } from 'recharts'
 import { downloadCSV, num } from '../lib/analytics'
 import {
@@ -36,6 +46,31 @@ import {
 
 const COLORS = ['#d3f1ad', '#80bdd4', '#e0b881', '#c3a0df']
 const DEFAULT_TOPICS = 'Technology,Financials,Energy,Macro & policy'
+type NewsPointResolver = (x: number, y: number) => number | null
+
+function NewsPointPicker({ resolver }: { resolver: Ref<NewsPointResolver> }) {
+  const scale = useXAxisInverseDataSnapScale()
+  const plot = usePlotArea()
+  useImperativeHandle(
+    resolver,
+    () => (x, y) => {
+      if (
+        !scale ||
+        !plot ||
+        x < plot.x ||
+        x > plot.x + plot.width ||
+        y < plot.y ||
+        y > plot.y + plot.height
+      )
+        return null
+      const time = scale(x)
+      return typeof time === 'number' && Number.isFinite(time) ? time : null
+    },
+    [scale, plot],
+  )
+  return null
+}
+
 const validTopics = (value: string) => {
   const topics = value.split(',')
   return (
@@ -143,6 +178,7 @@ export function NewsTimeline({
     (group) => group.id === inspection?.groupId,
   )
   const inspectionRef = useRef<HTMLDivElement>(null)
+  const pointResolver = useRef<NewsPointResolver>(null)
   const inspectButtonRef = useRef<HTMLButtonElement>(null)
   const focusInspection = useRef(false)
   useEffect(() => setSelectedInspection(null), [inspectionScope])
@@ -470,13 +506,15 @@ export function NewsTimeline({
               data={chartData}
               margin={{ top: 20, left: 2, right: 8, bottom: 8 }}
               accessibilityLayer
-              onClick={({ activeLabel, isTooltipActive }) => {
-                if (!isTooltipActive || activeLabel === undefined) return
-                const time = Number(activeLabel)
-                if (timeline.some((row) => row.time === time))
+              onClick={(_, event) => {
+                // Resolve the clicked position independently of tooltip focus changes.
+                const { relativeX, relativeY } = getRelativeCoordinate(event)
+                const time = pointResolver.current?.(relativeX, relativeY)
+                if (time != null && timeline.some((row) => row.time === time))
                   inspect(time, inspection?.groupId ?? 'all')
               }}
             >
+              <NewsPointPicker resolver={pointResolver} />
               <CartesianGrid
                 stroke="#2a3330"
                 strokeDasharray="3 5"

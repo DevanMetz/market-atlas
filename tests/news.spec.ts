@@ -1167,6 +1167,23 @@ test('chart clicks select their observed interval and topic inspection survives 
   )
   await expect(inspector.locator('.headline-card')).toHaveCount(1)
   await expect(inspector).toContainText('Stocks rise while oil prices fall')
+  await inspector
+    .getByRole('button', { name: 'Close headline inspector' })
+    .click()
+  await page
+    .locator('.news-sentiment-chart .recharts-line-dots .recharts-dot')
+    .last()
+    .click()
+  await expect(inspector.locator('.headline-card')).toHaveCount(2)
+  await expect(inspector).toContainText('Nvidia shares rally')
+  await inspector
+    .getByRole('button', { name: 'Close headline inspector' })
+    .click()
+  await page
+    .locator('.news-sentiment-chart .recharts-legend-wrapper')
+    .getByText('Mean score (right axis)', { exact: true })
+    .click()
+  await expect(inspector).toHaveCount(0)
   await page
     .getByRole('button', { name: 'Compare topics', exact: true })
     .click()
