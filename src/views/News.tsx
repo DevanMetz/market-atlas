@@ -269,17 +269,19 @@ export function NewsView({
 
   return (
     <div className="news-workspace">
-      <div className="news-banner">
-        <div>
-          <span className="eyebrow">THE MARKET WIRE</span>
-          <h2>A wider lens on the market.</h2>
-          <p>
-            {NEWS_SOURCES.length} sources to explore · {FEED_SOURCES.length}{' '}
-            connected feeds · Headlines, signals and original reporting.
-          </p>
+      {pane !== 'headlines' && (
+        <div className="news-banner">
+          <div>
+            <span className="eyebrow">THE MARKET WIRE</span>
+            <h2>A wider lens on the market.</h2>
+            <p>
+              {NEWS_SOURCES.length} sources to explore · {FEED_SOURCES.length}{' '}
+              connected feeds · Headlines, signals and original reporting.
+            </p>
+          </div>
+          <Newspaper size={52} strokeWidth={1} aria-hidden="true" />
         </div>
-        <Newspaper size={52} strokeWidth={1} aria-hidden="true" />
-      </div>
+      )}
       <div className="news-nav">
         <div
           className="segmented"
@@ -360,92 +362,117 @@ export function NewsView({
                 <option value="all">All retrieved headlines</option>
               </select>
             </label>
-            <label>
-              Topic
-              <select
-                aria-label="News topic"
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              >
-                <option value="all">All topics</option>
-                {HEADLINE_TOPICS.map((name) => (
-                  <option key={name}>{name}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Publisher
-              <select
-                aria-label="News publisher"
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-              >
-                <option value="all">All selected publishers</option>
-                {sourceIds.map((id) => (
-                  <option key={id} value={id}>
-                    {NEWS_SOURCE_MAP.get(id)?.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Headline tone
-              <select
-                aria-label="Headline sentiment filter"
-                value={tone}
-                onChange={(e) => setTone(e.target.value)}
-              >
-                {TONES.map((value) => (
-                  <option key={value} value={value}>
-                    {value === 'all'
-                      ? 'All tones'
-                      : value === 'unscored'
-                        ? 'No signal'
-                        : value[0].toUpperCase() + value.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="button"
-              onClick={() => {
-                setQuery('')
-                setDays('7')
-                setTopic('all')
-                setSource('all')
-                setTone('all')
-              }}
-            >
-              Reset filters
-            </button>
+            <details className="news-advanced">
+              <summary>
+                More filters
+                {[topic, source, tone].filter((value) => value !== 'all').length
+                  ? ` · ${[topic, source, tone].filter((value) => value !== 'all').length} active`
+                  : ''}
+              </summary>
+              <div className="news-advanced-grid">
+                <label>
+                  Topic
+                  <select
+                    aria-label="News topic"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                  >
+                    <option value="all">All topics</option>
+                    {HEADLINE_TOPICS.map((name) => (
+                      <option key={name}>{name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Publisher
+                  <select
+                    aria-label="News publisher"
+                    value={source}
+                    onChange={(e) => setSource(e.target.value)}
+                  >
+                    <option value="all">All selected publishers</option>
+                    {sourceIds.map((id) => (
+                      <option key={id} value={id}>
+                        {NEWS_SOURCE_MAP.get(id)?.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Headline tone
+                  <select
+                    aria-label="Headline sentiment filter"
+                    value={tone}
+                    onChange={(e) => setTone(e.target.value)}
+                  >
+                    {TONES.map((value) => (
+                      <option key={value} value={value}>
+                        {value === 'all'
+                          ? 'All tones'
+                          : value === 'unscored'
+                            ? 'No signal'
+                            : value[0].toUpperCase() + value.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="button"
+                  onClick={() => {
+                    setQuery('')
+                    setDays('7')
+                    setTopic('all')
+                    setSource('all')
+                    setTone('all')
+                  }}
+                >
+                  Reset filters
+                </button>
+              </div>
+            </details>
           </div>
-          <div className="stats-row news-stats">
-            <Stat
-              label="Matching headlines"
-              value={summary.total}
-              detail={`${headlines.reduce((n, item) => n + item.copies.length - 1, 0)} repeated copies grouped in retrieved sample`}
-            />
-            <Stat
-              label="Mean headline score"
-              value={scoreLabel(summary.score)}
-              detail="Scored headlines only · −100 to +100"
-            />
-            <Stat
-              label="Scoring coverage"
-              value={
-                summary.total
-                  ? `${num((summary.scored / summary.total) * 100, 0)}%`
-                  : '—'
-              }
-              detail={`${summary.scored} of ${summary.total} headlines contain scoring terms`}
-            />
-            <Stat
-              label="Publishers represented"
-              value={publishers.length}
-              detail={`${sourceIds.length} selected · snapshot, not a news archive`}
-            />
-          </div>
-          {tickerCounts.length > 0 && (
+          {pane === 'headlines' && (
+            <div className="news-compact-summary">
+              <span>
+                <strong>{summary.total}</strong> matching headlines
+              </span>
+              <span>
+                <strong>{publishers.length}</strong> publishers
+              </span>
+              <button onClick={() => setPane('sentiment')}>
+                Explore sentiment <ArrowUpRight size={13} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          {pane === 'sentiment' && (
+            <div className="stats-row news-stats">
+              <Stat
+                label="Matching headlines"
+                value={summary.total}
+                detail={`${headlines.reduce((n, item) => n + item.copies.length - 1, 0)} repeated copies grouped in retrieved sample`}
+              />
+              <Stat
+                label="Mean headline score"
+                value={scoreLabel(summary.score)}
+                detail="Scored headlines only · −100 to +100"
+              />
+              <Stat
+                label="Scoring coverage"
+                value={
+                  summary.total
+                    ? `${num((summary.scored / summary.total) * 100, 0)}%`
+                    : '—'
+                }
+                detail={`${summary.scored} of ${summary.total} headlines contain scoring terms`}
+              />
+              <Stat
+                label="Publishers represented"
+                value={publishers.length}
+                detail={`${sourceIds.length} selected · snapshot, not a news archive`}
+              />
+            </div>
+          )}
+          {pane === 'sentiment' && tickerCounts.length > 0 && (
             <div className="news-mentions">
               <span>Company mentions</span>
               {tickerCounts.map(([ticker, count]) => (
@@ -456,11 +483,13 @@ export function NewsView({
               ))}
             </div>
           )}
-          <p className="news-sample-note">
-            All charts and counts follow these filters. Headlines are a limited,
-            changing feed snapshot. Undated items appear only under “All
-            retrieved headlines.”
-          </p>
+          {pane === 'sentiment' && (
+            <p className="news-sample-note">
+              All charts and counts follow these filters. Headlines are a
+              limited, changing feed snapshot. Undated items appear only under
+              “All retrieved headlines.”
+            </p>
+          )}
         </>
       )}
       {pane === 'headlines' && (

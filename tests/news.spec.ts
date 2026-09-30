@@ -54,6 +54,7 @@ test('news searches ticker aliases and topics, groups copies and preserves filte
   await page.reload()
   await expect(page.getByLabel('Search news headlines')).toHaveValue('NVDA')
   await expect(page.locator('.headline-card')).toHaveCount(1)
+  await page.locator('.news-advanced summary').click()
   await page.getByRole('button', { name: 'Reset filters', exact: true }).click()
   await page.getByLabel('Headline sentiment filter').selectOption('negative')
   await expect(page.locator('.headline-card')).toHaveCount(1)
