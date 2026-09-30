@@ -215,6 +215,12 @@ test('hourly topic comparisons preserve their settings and export coverage with 
         violation.impact === 'serious' || violation.impact === 'critical',
     ),
   ).toEqual([])
+  await page.goto(
+    '/?view=news&newsTab=sentiment&feeds=bbc&newsChart=topics&newsTopics=Healthcare',
+  )
+  await expect(page.locator('.news-timeline-panel').getByRole('status')).toContainText(
+    'No scored headlines for the selected topics.',
+  )
 })
 
 test('failed news feeds remain visible without fabricated headlines', async ({

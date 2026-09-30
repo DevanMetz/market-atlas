@@ -77,6 +77,10 @@ export function NewsTimeline({
     () => headlineTopicTimeline(items, topics, interval),
     [items, topics, interval],
   )
+  const chartData = useMemo(
+    () => comparison.map((row, index) => ({ ...timeline[index], ...row })),
+    [comparison, timeline],
+  )
   const rows = useMemo(
     () =>
       chart === 'topics'
@@ -245,6 +249,16 @@ export function NewsTimeline({
           </div>
         </fieldset>
       )}
+      {chart === 'topics' &&
+        timeline.length > 0 &&
+        !comparison.some((row) =>
+          topics.some((topic) => row.topics[topic].score !== null),
+        ) && (
+          <p className="panel-note" role="status">
+            No scored headlines for the selected topics. Try different topics or
+            filters; missing scores do not imply neutral sentiment.
+          </p>
+        )}
       {timeline.length ? (
         <div
           className="news-sentiment-chart"
@@ -257,7 +271,7 @@ export function NewsTimeline({
         >
           <ResponsiveContainer width="100%" height={330} minWidth={0}>
             <ComposedChart
-              data={chart === 'topics' ? comparison : timeline}
+              data={chartData}
               margin={{ top: 20, left: 2, right: 8, bottom: 8 }}
               accessibilityLayer
             >
