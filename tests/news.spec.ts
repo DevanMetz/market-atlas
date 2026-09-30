@@ -839,8 +839,9 @@ test('volume axes scale above 100 and metric changes also work for topics and th
     }),
   ).toBeVisible()
   const axis = page.locator(
-    '.news-sentiment-chart .recharts-yAxis .recharts-cartesian-axis-tick-value',
+    '.news-sentiment-chart .recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value',
   )
+  await expect(axis.first()).toBeAttached()
   await expect
     .poll(async () => Math.max(...(await axis.allTextContents()).map(Number)))
     .toBeGreaterThanOrEqual(140)
