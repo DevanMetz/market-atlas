@@ -25,6 +25,8 @@ import { useNews } from '../lib/useNews'
 import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
 import { Empty, Panel, Stat } from '../components/UI'
 import { NewsTimeline } from '../components/NewsTimeline'
+import { NewsCompanies } from '../components/NewsCompanies'
+import { parseNewsCompanies, stockResearchHref } from '../lib/newsCompanies'
 
 const scoreLabel = (score: number | null) =>
   score === null ? 'No signal' : `${score > 0 ? '+' : ''}${num(score, 0)}`
@@ -53,10 +55,10 @@ function SentimentBadge({ item }: { item: ReturnType<typeof scoreHeadline> }) {
 
 export function NewsView({
   notify,
-  onStock,
+  watchlist,
 }: {
   notify: (message: string) => void
-  onStock: (symbol: string) => void
+  watchlist: string[]
 }) {
   const [pane, setPane] = useQueryChoice(
     'newsTab',
@@ -71,6 +73,15 @@ export function NewsView({
   const sourceIds = useMemo(() => [...new Set(feedList.split(','))], [feedList])
   const news = useNews(sourceIds)
   const [query, setQuery] = useQuerySetting('q', '', (v) => v.length <= 120)
+  const [companyList, setCompanyList] = useQuerySetting(
+    'newsCompanies',
+    '',
+    (value) => parseNewsCompanies(value) !== null,
+  )
+  const companies = useMemo(
+    () => parseNewsCompanies(companyList) ?? [],
+    [companyList],
+  )
   const [days, setDays] = useQueryChoice(
     'days',
     ['1', '7', '30', 'all'] as const,
@@ -121,7 +132,7 @@ export function NewsView({
   useEffect(() => setDraftFeeds(sourceIds), [sourceIds])
   useEffect(
     () => setPage(0),
-    [query, days, tone, topic, source, sort, feedList],
+    [query, days, tone, topic, source, sort, feedList, companyList],
   )
   useEffect(
     () => setDirectoryPage(0),
@@ -138,6 +149,11 @@ export function NewsView({
     const since = Date.now() - Number(days) * 86400000
     return headlines
       .filter((item) => {
+        if (
+          companies.length &&
+          !item.tickers.some((ticker) => companies.includes(ticker))
+        )
+          return false
         if (
           days !== 'all' &&
           (!item.publishedAt || Date.parse(item.publishedAt) < since)
@@ -163,7 +179,7 @@ export function NewsView({
             ? (a.publishedAt ?? '9999').localeCompare(b.publishedAt ?? '9999')
             : (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''),
       )
-  }, [headlines, query, days, tone, topic, source, sort])
+  }, [headlines, query, days, tone, topic, source, sort, companies])
   const summary = useMemo(() => summarizeHeadlines(filtered), [filtered])
   const topics = useMemo(
     () =>
@@ -233,6 +249,7 @@ export function NewsView({
         'Scoring terms',
         'Topics',
         'Mentioned tickers',
+        'Ticker match evidence',
         'Grouped copies',
         'Feed retrieved at',
         'Feed status',
@@ -249,6 +266,11 @@ export function NewsView({
           .join('; '),
         item.topics.join('; '),
         item.tickers.join('; '),
+        item.mentions
+          .map(
+            (mention) => `${mention.symbol}: ${mention.text} (${mention.kind})`,
+          )
+          .join('; '),
         item.copies.length,
         news.feeds[item.sourceId]?.fetchedAt,
         news.feeds[item.sourceId]?.stale ? 'Stale cache' : 'Retrieved',
@@ -412,6 +434,7 @@ export function NewsView({
                     setTopic('all')
                     setSource('all')
                     setTone('all')
+                    setCompanyList('')
                   }}
                 >
                   Reset filters
@@ -419,6 +442,12 @@ export function NewsView({
               </div>
             </details>
           </div>
+          <NewsCompanies
+            companies={companies}
+            onChange={(symbols) => setCompanyList(symbols.join(','))}
+            watchlist={watchlist}
+            notify={notify}
+          />
           {pane === 'headlines' && (
             <div className="news-compact-summary">
               <span>
@@ -464,7 +493,7 @@ export function NewsView({
             <div className="news-mentions">
               <span>Company mentions</span>
               {tickerCounts.map(([ticker, count]) => (
-                <button key={ticker} onClick={() => setQuery(ticker)}>
+                <button key={ticker} onClick={() => setCompanyList(ticker)}>
                   {ticker}
                   <small>{count}</small>
                 </button>
@@ -548,14 +577,14 @@ export function NewsView({
                       </button>
                     ))}
                     {item.tickers.map((ticker) => (
-                      <button
+                      <a
                         key={ticker}
                         className="ticker-link"
                         aria-label={`Research ${ticker}`}
-                        onClick={() => onStock(ticker)}
+                        href={stockResearchHref(ticker, window.location.search)}
                       >
                         ${ticker} ↗
-                      </button>
+                      </a>
                     ))}
                   </div>
                   <details className="headline-explanation">
@@ -577,6 +606,18 @@ export function NewsView({
                             .join(' · ')
                         : 'No words or phrases in the current English lexicon were matched. This does not mean the story is neutral.'}
                     </p>
+                    {item.mentions.length > 0 && (
+                      <p>
+                        Company matches in this headline group:{' '}
+                        {item.mentions
+                          .map(
+                            (mention) =>
+                              `${mention.symbol} via “${mention.text}” (${mention.kind})`,
+                          )
+                          .join(' · ')}
+                        . Name matches are inferred and may be ambiguous.
+                      </p>
+                    )}
                     {item.copies.length > 1 && (
                       <ul>
                         {item.copies.map((copy) => (

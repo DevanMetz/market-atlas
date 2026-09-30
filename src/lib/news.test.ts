@@ -104,6 +104,21 @@ describe('headline samples', () => {
     ])
     expect(items[0].copies).toHaveLength(1)
   })
+  it('retains ticker evidence found in a grouped publisher copy', () => {
+    const rows = analyzeHeadlines([
+      feed([
+        item('IBM hosts annual meeting', 'https://example.org/one', 'bbc'),
+        item('$IBM hosts annual meeting', 'https://example.org/two', 'cnbc'),
+      ]),
+    ])
+    expect(rows).toHaveLength(1)
+    expect(rows[0].tickers).toEqual(['IBM'])
+    expect(rows[0].mentions).toContainEqual({
+      symbol: 'IBM',
+      text: '$IBM',
+      kind: 'cashtag',
+    })
+  })
   it('averages scored titles only and leaves empty groups unknown', () => {
     const rows = analyzeHeadlines([
       feed([

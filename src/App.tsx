@@ -449,7 +449,7 @@ export default function App() {
           </a>
           <div className="sidebar-status">
             <span>PUBLIC RESEARCH WORKSPACE</span>
-            <small>Market Atlas · v1.6</small>
+            <small>Market Atlas · v1.7</small>
           </div>
         </div>
       </aside>
@@ -668,7 +668,9 @@ export default function App() {
           {view === 'sectors' && <SectorExplorer ctx={ctx} />}
           {view === 'compare' && <Comparison ctx={ctx} />}
           {view === 'trends' && <TrendsView ctx={ctx} />}
-          {view === 'news' && <NewsView notify={notify} onStock={openStock} />}
+          {view === 'news' && (
+            <NewsView notify={notify} watchlist={watchlist} />
+          )}
           {view === 'risk' && (
             <RiskView ctx={ctx} focus={riskFocus} onFocus={setFocus} />
           )}

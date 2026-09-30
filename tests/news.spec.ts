@@ -4,6 +4,9 @@ import { readFile } from 'node:fs/promises'
 
 // Synthetic headlines exist only in this browser test fixture; never in production.
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/search?*', (route) =>
+    route.fulfill({ json: { matches: [] } }),
+  )
   await page.route('**/api/news?*', (route) => {
     const ids = new URL(route.request().url()).searchParams
       .get('sources')!
@@ -38,6 +41,78 @@ test.beforeEach(async ({ page }) => {
       },
     })
   })
+})
+
+test('company focus combines selected tickers, preserves a watchlist snapshot and explains matches', async ({
+  page,
+}) => {
+  await page.goto('/?view=news&feeds=bbc,cnbc')
+  await expect(page.locator('.headline-card')).toHaveCount(5)
+  await page.locator('.news-company-focus summary').click()
+  const picker = page.getByRole('combobox', {
+    name: 'Add a company or ticker to news…',
+  })
+  await picker.fill('Apple')
+  await picker.press('Enter')
+  await expect(page.locator('.headline-card')).toHaveCount(1)
+  await expect(page.locator('.headline-card')).toContainText('Apple')
+  await picker.fill('Nvidia')
+  await picker.press('Enter')
+  await expect(page.locator('.headline-card')).toHaveCount(2)
+  await page
+    .getByRole('button', { name: 'Remove AAPL from news focus', exact: true })
+    .click()
+  await expect(page.locator('.headline-card')).toHaveCount(1)
+  await page.locator('.headline-explanation summary').click()
+  await expect(page.locator('.headline-explanation')).toContainText(
+    'NVDA via “Nvidia” (company name)',
+  )
+  await page
+    .getByRole('button', { name: 'Use my watchlist', exact: true })
+    .click()
+  await expect(page.locator('.headline-card')).toHaveCount(2)
+  await expect(page).toHaveURL(/newsCompanies=AAPL%2CMSFT%2CNVDA%2CSPY/)
+  await page.evaluate(() =>
+    localStorage.setItem('market-atlas-watchlist', JSON.stringify(['IBM'])),
+  )
+  await page.reload()
+  await expect(page.locator('.headline-card')).toHaveCount(2)
+  await expect(
+    page.getByRole('button', {
+      name: 'Remove AAPL from news focus',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await page
+    .locator('.news-company-focus')
+    .screenshot({ path: 'test-results/news-companies-desktop.png' })
+  const downloadEvent = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export headlines', exact: true })
+    .click()
+  const csv = await readFile((await (await downloadEvent).path())!, 'utf8')
+  expect(csv).toContain('Ticker match evidence')
+  expect(csv).toContain('NVDA: Nvidia (company name)')
+  expect(csv.trim().split(/\r?\n/)).toHaveLength(3)
+  await page.getByRole('button', { name: 'Sentiment lab', exact: true }).click()
+  await expect(page.locator('.news-chart-controls')).toContainText(
+    '2 dated headlines',
+  )
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390)
+  await page
+    .locator('.news-company-focus')
+    .screenshot({ path: 'test-results/news-companies-mobile.png' })
+  await page.locator('.news-advanced summary').click()
+  await page.getByRole('button', { name: 'Reset filters', exact: true }).click()
+  await expect(page.locator('.news-chart-controls')).toContainText(
+    '5 dated headlines',
+  )
+  await expect(page.locator('.news-company-focus summary')).toContainText(
+    'All headlines',
+  )
 })
 
 test('news searches ticker aliases and topics, groups copies and preserves filters', async ({

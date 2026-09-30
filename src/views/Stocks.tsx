@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   ArrowDownUp,
   ExternalLink,
+  Newspaper,
   SlidersHorizontal,
   Star,
 } from 'lucide-react'
@@ -18,6 +19,7 @@ import type { Asset, History } from '../lib/types'
 import { Change, Empty, Panel, Stat, Toggle } from '../components/UI'
 import { PerformanceChart, Sparkline } from '../components/Charts'
 import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
+import { companyNewsHref } from '../lib/newsCompanies'
 
 type Sort = 'symbol' | 'price' | 'day' | 'change' | 'volatility' | 'rsi'
 export function AssetTable({
@@ -272,6 +274,12 @@ export function StockDetail({
         <button className="button" onClick={() => ctx.compare([symbol])}>
           Compare
         </button>
+        <a
+          className="button"
+          href={companyNewsHref([symbol], window.location.search)}
+        >
+          <Newspaper size={15} /> Related headlines
+        </a>
       </div>
       {ctx.errors[symbol] ? (
         <Empty

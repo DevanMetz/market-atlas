@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Newspaper, Trash2 } from 'lucide-react'
 import { asset, GLOBAL, SECTORS } from '../lib/catalog'
 import {
   downloadCSV,
@@ -22,6 +22,7 @@ import { Change, Empty, Panel, Stat, SymbolSearch } from '../components/UI'
 import { DistributionChart, PerformanceChart } from '../components/Charts'
 import { AssetTable } from './Stocks'
 import { useQueryChoice } from '../lib/viewSettings'
+import { companyNewsHref } from '../lib/newsCompanies'
 
 export function Correlations({ ctx }: { ctx: MarketContext }) {
   const [universe, setUniverse] = useQueryChoice(
@@ -727,12 +728,21 @@ export function Watchlist({
           <Panel
             title="Watchlist"
             action={
-              <button
-                className="button"
-                onClick={() => ctx.compare(ctx.watchlist.slice(0, 12))}
-              >
-                Compare watchlist
-              </button>
+              <div className="watchlist-actions">
+                <a
+                  className="button"
+                  href={companyNewsHref(ctx.watchlist, window.location.search)}
+                >
+                  <Newspaper size={14} />
+                  Watchlist news
+                </a>
+                <button
+                  className="button"
+                  onClick={() => ctx.compare(ctx.watchlist.slice(0, 12))}
+                >
+                  Compare watchlist
+                </button>
+              </div>
             }
           >
             <AssetTable
@@ -947,8 +957,14 @@ export function Methodology() {
           <li>
             Up to five years of daily history, subject to an asset’s listing
             date and provider availability. Fundamental valuations, analyst
-            estimates, news, options chains and real-time trading are not
-            included.
+            estimates, options chains and real-time trading are not included.
+          </li>
+          <li>
+            News uses selected publisher feeds and a searchable source
+            directory. Headline sentiment is an English word-scoring heuristic.
+            Company matches use catalog names and explicit tickers; names may be
+            ambiguous, coverage is incomplete, and scores describe the whole
+            title rather than an individual company's prospects.
           </li>
           <li>
             Stock and cross-asset comparisons use local-currency percentage

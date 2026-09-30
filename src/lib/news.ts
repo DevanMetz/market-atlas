@@ -1,4 +1,6 @@
 import catalog from './news-sources.json'
+import { headlineCompanyMentions } from './newsCompanies'
+import type { CompanyMention } from './newsCompanies'
 
 export type NewsSource = {
   id: string
@@ -302,36 +304,11 @@ const TOPIC_RULES: [string, RegExp][] = [
   ],
 ]
 export const HEADLINE_TOPICS = TOPIC_RULES.map(([name]) => name)
-const COMPANY_ALIASES: [string, RegExp][] = [
-  ['AAPL', /\bApple\b/i],
-  ['MSFT', /\bMicrosoft\b/i],
-  ['NVDA', /\bNvidia\b/i],
-  ['AMZN', /\bAmazon\b/i],
-  ['GOOGL', /\b(?:Alphabet|Google)\b/i],
-  ['META', /\bMeta(?: Platforms)?\b/i],
-  ['TSLA', /\bTesla\b/i],
-  ['NFLX', /\bNetflix\b/i],
-  ['AVGO', /\bBroadcom\b/i],
-  ['AMD', /\bAMD\b/],
-  ['ORCL', /\bOracle\b/i],
-  ['PLTR', /\bPalantir\b/i],
-  ['JPM', /\bJP\s?Morgan\b/i],
-  ['GS', /\bGoldman Sachs\b/i],
-  ['BAC', /\bBank of America\b/i],
-  ['XOM', /\bExxon(?:Mobil)?\b/i],
-  ['CVX', /\bChevron\b/i],
-  ['LLY', /\bEli Lilly\b/i],
-  ['UNH', /\bUnitedHealth\b/i],
-  ['WMT', /\bWalmart\b/i],
-  ['COST', /\bCostco\b/i],
-  ['BA', /\bBoeing\b/i],
-  ['PFE', /\bPfizer\b/i],
-  ['COIN', /\bCoinbase\b/i],
-]
 export type AnalyzedHeadline = NewsItem &
   Sentiment & {
     topics: string[]
     tickers: string[]
+    mentions: CompanyMention[]
     copies: NewsItem[]
   }
 export function analyzeHeadlines(feeds: NewsFeed[]): AnalyzedHeadline[] {
@@ -360,25 +337,27 @@ export function analyzeHeadlines(feeds: NewsFeed[]): AnalyzedHeadline[] {
         )
       )
         previous.copies.push(item)
+      for (const mention of headlineCompanyMentions(item.title)) {
+        if (
+          !previous.mentions.some(
+            (existing) => existing.symbol === mention.symbol,
+          )
+        ) {
+          previous.mentions.push(mention)
+          previous.tickers.push(mention.symbol)
+        }
+      }
       continue
     }
-    const explicit = [
-      ...item.title.matchAll(/\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g),
-    ].map((m) => m[1])
+    const mentions = headlineCompanyMentions(item.title)
     groups.set(key, {
       ...item,
       ...scoreHeadline(item.title),
       topics: TOPIC_RULES.filter(([, pattern]) => pattern.test(item.title)).map(
         ([name]) => name,
       ),
-      tickers: [
-        ...new Set([
-          ...explicit,
-          ...COMPANY_ALIASES.filter(([, pattern]) =>
-            pattern.test(item.title),
-          ).map(([ticker]) => ticker),
-        ]),
-      ],
+      tickers: mentions.map((mention) => mention.symbol),
+      mentions,
       copies: [item],
     })
   }

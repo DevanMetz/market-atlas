@@ -12,6 +12,7 @@ export const VIEW_SETTINGS: Record<View, readonly string[]> = {
     'newsTab',
     'feeds',
     'q',
+    'newsCompanies',
     'days',
     'tone',
     'topic',

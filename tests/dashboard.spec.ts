@@ -110,6 +110,69 @@ test('company-name search opens a stock and filters the research catalog', async
   await expect(page.locator('tbody tr')).toHaveCount(1)
 })
 
+test('stock and watchlist news links retain research settings and browser Back restores the company filter', async ({
+  page,
+}) => {
+  await page.route('**/api/news?*', (route) => {
+    const ids = new URL(route.request().url()).searchParams
+      .get('sources')!
+      .split(',')
+    return route.fulfill({
+      json: {
+        feeds: ids.map((sourceId) => ({
+          sourceId,
+          fetchedAt: new Date().toISOString(),
+          items: [
+            {
+              sourceId,
+              title: 'Nvidia shares rally',
+              url: `https://example.org/${sourceId}/nvidia`,
+              publishedAt: new Date(Date.now() - 3600000).toISOString(),
+            },
+          ],
+        })),
+        errors: [],
+      },
+    })
+  })
+  await page.goto(
+    '/?view=stocks&stock=NVDA&benchmark=QQQ&start=2026-01-01&end=2026-06-01',
+  )
+  await page
+    .getByRole('link', { name: 'Related headlines', exact: true })
+    .click()
+  await expect(page).toHaveURL(/view=news/)
+  await expect(page).toHaveURL(/newsCompanies=NVDA/)
+  await expect(page.locator('.headline-card')).toHaveCount(1)
+  await page.getByRole('link', { name: 'Research NVDA', exact: true }).click()
+  await expect(page).toHaveURL(/view=stocks/)
+  await expect(page).toHaveURL(/stock=NVDA/)
+  await expect(page).toHaveURL(/benchmark=QQQ/)
+  await expect(page).toHaveURL(/start=2026-01-01/)
+  await expect(page).toHaveURL(/end=2026-06-01/)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390)
+  await page
+    .locator('.stock-heading')
+    .screenshot({ path: 'test-results/news-stock-link-mobile.png' })
+  await page.goBack()
+  await expect(page).toHaveURL(/view=news/)
+  await expect(
+    page.getByRole('button', {
+      name: 'Remove NVDA from news focus',
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(page.locator('.headline-card')).toHaveCount(1)
+  await page.goto('/?view=watchlist&benchmark=QQQ')
+  await page.getByRole('link', { name: 'Watchlist news', exact: true }).click()
+  await expect(page).toHaveURL(/newsCompanies=AAPL%2CMSFT%2CNVDA%2CSPY/)
+  await expect(page).toHaveURL(/benchmark=QQQ/)
+  await expect(page.locator('.headline-card')).toHaveCount(1)
+})
+
 test('watchlist persists on this device', async ({ page }) => {
   await page.goto('/?view=watchlist')
   const search = page.getByLabel('Add stock or ETF to watchlist…')
