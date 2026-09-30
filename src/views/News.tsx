@@ -7,24 +7,12 @@ import {
   Search,
   SlidersHorizontal,
 } from 'lucide-react'
-import {
-  Bar,
-  CartesianGrid,
-  ComposedChart,
-  Legend,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import { downloadCSV, num, shortDate } from '../lib/analytics'
 import {
   analyzeHeadlines,
   DEFAULT_NEWS_SOURCES,
   FEED_SOURCES,
   HEADLINE_TOPICS,
-  headlineTimeline,
   NEWS_CATEGORIES,
   NEWS_REGIONS,
   NEWS_SOURCE_MAP,
@@ -36,6 +24,7 @@ import type { NewsFeed } from '../lib/news'
 import { useNews } from '../lib/useNews'
 import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
 import { Empty, Panel, Stat } from '../components/UI'
+import { NewsTimeline } from '../components/NewsTimeline'
 
 const scoreLabel = (score: number | null) =>
   score === null ? 'No signal' : `${score > 0 ? '+' : ''}${num(score, 0)}`
@@ -176,7 +165,6 @@ export function NewsView({
       )
   }, [headlines, query, days, tone, topic, source, sort])
   const summary = useMemo(() => summarizeHeadlines(filtered), [filtered])
-  const timeline = useMemo(() => headlineTimeline(filtered), [filtered])
   const topics = useMemo(
     () =>
       HEADLINE_TOPICS.map((name) => ({
@@ -643,146 +631,7 @@ export function NewsView({
       )}
       {pane === 'sentiment' && (
         <>
-          <Panel
-            title="Headline tone over time"
-            eyebrow="OBSERVED PUBLICATION DATES · UTC"
-            action={
-              <button
-                className="button"
-                disabled={!timeline.length}
-                onClick={() =>
-                  downloadCSV(
-                    'market-atlas-news-sentiment.csv',
-                    [
-                      'Date (UTC)',
-                      'Headlines',
-                      'Scored',
-                      'Mean score',
-                      'Positive',
-                      'Negative',
-                      'Mixed',
-                      'No signal',
-                    ],
-                    timeline.map((row) => [
-                      row.date,
-                      row.total,
-                      row.scored,
-                      row.score,
-                      row.positive,
-                      row.negative,
-                      row.mixed,
-                      row.unscored,
-                    ]),
-                  )
-                }
-              >
-                <Download size={14} />
-                Export sentiment
-              </button>
-            }
-          >
-            {timeline.length ? (
-              <div
-                className="news-sentiment-chart"
-                role="region"
-                aria-label="Daily headline volume and mean sentiment score"
-              >
-                <ResponsiveContainer width="100%" height={330} minWidth={0}>
-                  <ComposedChart
-                    data={timeline}
-                    margin={{ top: 20, left: 2, right: 8, bottom: 8 }}
-                    accessibilityLayer
-                  >
-                    <CartesianGrid
-                      stroke="#2a3330"
-                      strokeDasharray="3 5"
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fill: '#a2afa5', fontSize: 11 }}
-                      minTickGap={38}
-                      tickFormatter={(v: string) => v.slice(5)}
-                    />
-                    <YAxis
-                      yAxisId="count"
-                      allowDecimals={false}
-                      tick={{ fill: '#a2afa5', fontSize: 11 }}
-                      width={40}
-                    />
-                    <YAxis
-                      yAxisId="score"
-                      orientation="right"
-                      domain={[-100, 100]}
-                      tick={{ fill: '#b8e986', fontSize: 11 }}
-                      width={40}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        background: '#18221c',
-                        border: '1px solid #40513f',
-                        borderRadius: 8,
-                      }}
-                      labelStyle={{ color: '#e8ede7' }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar
-                      yAxisId="count"
-                      dataKey="positive"
-                      name="Positive"
-                      stackId="tone"
-                      fill="#8fbd73"
-                      isAnimationActive={false}
-                    />
-                    <Bar
-                      yAxisId="count"
-                      dataKey="negative"
-                      name="Negative"
-                      stackId="tone"
-                      fill="#c58079"
-                      isAnimationActive={false}
-                    />
-                    <Bar
-                      yAxisId="count"
-                      dataKey="mixed"
-                      name="Mixed"
-                      stackId="tone"
-                      fill="#b6a36c"
-                      isAnimationActive={false}
-                    />
-                    <Bar
-                      yAxisId="count"
-                      dataKey="unscored"
-                      name="No signal"
-                      stackId="tone"
-                      fill="#4d6155"
-                      isAnimationActive={false}
-                    />
-                    <Line
-                      yAxisId="score"
-                      dataKey="score"
-                      name="Mean score (right axis)"
-                      stroke="#d3f1ad"
-                      strokeWidth={2}
-                      dot={timeline.length < 14}
-                      connectNulls={false}
-                      isAnimationActive={false}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <Empty title="No dated headlines in this sample">
-                Adjust the filters or select more sources to build the chart.
-              </Empty>
-            )}
-            <p className="panel-note">
-              Bars count unique headline groups. The line averages only scored
-              titles; no-signal titles are excluded. Dates without retrieved
-              headlines are omitted, not assumed to have zero coverage. This is
-              not a historical backtest or a measure of investor sentiment.
-            </p>
-          </Panel>
+          <NewsTimeline items={filtered} days={days} feeds={feeds} />
           <div className="two-col">
             <Panel title="Topics in the conversation">
               <div className="news-topic-bars">

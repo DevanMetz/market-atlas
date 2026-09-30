@@ -398,14 +398,48 @@ export function summarizeHeadlines(items: AnalyzedHeadline[]) {
     unscored: items.filter((item) => item.tone === 'unscored').length,
   }
 }
-export function headlineTimeline(items: AnalyzedHeadline[]) {
+export type NewsInterval = 'hour' | 'day'
+
+function headlineBuckets(items: AnalyzedHeadline[], interval: NewsInterval) {
   const groups = new Map<string, AnalyzedHeadline[]>()
   for (const item of items) {
     if (!item.publishedAt) continue
-    const day = item.publishedAt.slice(0, 10)
-    groups.set(day, [...(groups.get(day) ?? []), item])
+    const time = Date.parse(item.publishedAt)
+    if (!Number.isFinite(time)) continue
+    const utc = new Date(time).toISOString()
+    const date =
+      interval === 'hour' ? `${utc.slice(0, 13)}:00:00.000Z` : utc.slice(0, 10)
+    const group = groups.get(date)
+    if (group) group.push(item)
+    else groups.set(date, [item])
   }
-  return [...groups]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, group]) => ({ date, ...summarizeHeadlines(group) }))
+  return [...groups].sort(([a], [b]) => a.localeCompare(b))
+}
+
+export function headlineTimeline(
+  items: AnalyzedHeadline[],
+  interval: NewsInterval = 'day',
+) {
+  return headlineBuckets(items, interval).map(([date, group]) => ({
+    date,
+    time: Date.parse(date),
+    ...summarizeHeadlines(group),
+  }))
+}
+
+export function headlineTopicTimeline(
+  items: AnalyzedHeadline[],
+  topics: string[],
+  interval: NewsInterval = 'day',
+) {
+  return headlineBuckets(items, interval).map(([date, group]) => ({
+    date,
+    time: Date.parse(date),
+    topics: Object.fromEntries(
+      topics.map((topic) => [
+        topic,
+        summarizeHeadlines(group.filter((item) => item.topics.includes(topic))),
+      ]),
+    ),
+  }))
 }

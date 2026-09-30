@@ -3,6 +3,7 @@ import {
   analyzeHeadlines,
   FEED_SOURCES,
   headlineTimeline,
+  headlineTopicTimeline,
   NEWS_SOURCES,
   scoreHeadline,
   summarizeHeadlines,
@@ -139,6 +140,120 @@ describe('headline samples', () => {
   it('recognizes explicit ticker notation without turning ordinary short words into tickers', () => {
     const [row] = analyzeHeadlines([feed([item('A look at $IBM and $MSFT')])])
     expect(row.tickers).toEqual(['IBM', 'MSFT'])
+  })
+  it('buckets hourly publication times in UTC, preserving boundaries and absent hours', () => {
+    const rows = analyzeHeadlines([
+      feed([
+        item(
+          'Nvidia shares rally',
+          'https://example.org/1',
+          'bbc',
+          '2026-09-29T00:59:59Z',
+        ),
+        item(
+          'Apple schedules meeting',
+          'https://example.org/2',
+          'bbc',
+          '2026-09-29T01:05:00+01:00',
+        ),
+        item(
+          'Banks plunge',
+          'https://example.org/3',
+          'bbc',
+          '2026-09-29T01:00:00Z',
+        ),
+        item(
+          'Oil rises',
+          'https://example.org/4',
+          'bbc',
+          '2026-09-29T03:30:00Z',
+        ),
+        item('Undated announcement', 'https://example.org/5', 'bbc', null),
+        item(
+          'Invalid announcement',
+          'https://example.org/6',
+          'bbc',
+          'bad date',
+        ),
+      ]),
+    ])
+    const timeline = headlineTimeline(rows, 'hour')
+    expect(timeline.map((row) => row.date)).toEqual([
+      '2026-09-29T00:00:00.000Z',
+      '2026-09-29T01:00:00.000Z',
+      '2026-09-29T03:00:00.000Z',
+    ])
+    expect(timeline[0]).toMatchObject({
+      total: 2,
+      scored: 1,
+      unscored: 1,
+      score: 40,
+    })
+    expect(timeline[1].time - timeline[0].time).toBe(3600000)
+    expect(timeline[2].time - timeline[1].time).toBe(7200000)
+    expect(headlineTimeline(rows, 'day')).toMatchObject([
+      { date: '2026-09-29', total: 4, scored: 3 },
+    ])
+  })
+  it('separates absent topic coverage from observed titles without scoring terms', () => {
+    const rows = analyzeHeadlines([
+      feed([
+        item(
+          'Nvidia earnings surge',
+          'https://example.org/1',
+          'bbc',
+          '2026-09-29T10:10:00Z',
+        ),
+        item(
+          'Apple schedules meeting',
+          'https://example.org/2',
+          'bbc',
+          '2026-09-29T10:20:00Z',
+        ),
+        item(
+          'Bank earnings plunge',
+          'https://example.org/3',
+          'bbc',
+          '2026-09-29T11:20:00Z',
+        ),
+        item(
+          'Microsoft schedules meeting',
+          'https://example.org/4',
+          'bbc',
+          '2026-09-29T12:20:00Z',
+        ),
+      ]),
+    ])
+    const timeline = headlineTopicTimeline(
+      rows,
+      ['Technology', 'Financials', 'Earnings'],
+      'hour',
+    )
+    expect(timeline[0].topics.Technology).toMatchObject({
+      total: 2,
+      scored: 1,
+      unscored: 1,
+      score: 50,
+    })
+    expect(timeline[0].topics.Financials).toMatchObject({
+      total: 0,
+      scored: 0,
+      score: null,
+    })
+    expect(timeline[0].topics.Earnings).toMatchObject({
+      total: 1,
+      scored: 1,
+      score: 50,
+    })
+    expect(timeline[1].topics.Technology.score).toBeNull()
+    expect(timeline[1].topics.Financials.score).toBe(-50)
+    expect(timeline[2].topics.Technology).toMatchObject({
+      total: 1,
+      scored: 0,
+      unscored: 1,
+      score: null,
+    })
+    expect(headlineTopicTimeline([], ['Technology'], 'hour')).toEqual([])
   })
 })
 
