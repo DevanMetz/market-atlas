@@ -206,9 +206,9 @@ test('hourly topic comparisons preserve their settings and export coverage with 
     }),
   ).toBeVisible()
   await page.setViewportSize({ width: 390, height: 844 })
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth),
-  ).toBeLessThanOrEqual(390)
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390)
   await page
     .locator('.news-timeline-panel')
     .screenshot({ path: 'test-results/news-topic-mobile.png' })
