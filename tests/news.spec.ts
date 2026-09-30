@@ -83,6 +83,13 @@ test('sentiment charts, transparent sandbox and exports follow the sample', asyn
   ).toBeVisible()
   await expect(page.locator('.news-publisher-table tbody tr')).toHaveCount(2)
   await page.screenshot({ path: 'test-results/news-sentiment.png' })
+  await expect(
+    page.locator('.news-sentiment-chart .recharts-bar-rectangle').first(),
+  ).toBeVisible()
+  await page.mouse.move(0, 0)
+  await page
+    .locator('.news-timeline-panel')
+    .screenshot({ path: 'test-results/news-volume-timeline.png' })
   await page
     .getByLabel('Headline sentiment sandbox')
     .fill('Stocks do not rally')
@@ -218,9 +225,9 @@ test('hourly topic comparisons preserve their settings and export coverage with 
   await page.goto(
     '/?view=news&newsTab=sentiment&feeds=bbc&newsChart=topics&newsTopics=Healthcare',
   )
-  await expect(page.locator('.news-timeline-panel').getByRole('status')).toContainText(
-    'No scored headlines for the selected topics.',
-  )
+  await expect(
+    page.locator('.news-timeline-panel').getByRole('status'),
+  ).toContainText('No scored headlines for the selected topics.')
 })
 
 test('failed news feeds remain visible without fabricated headlines', async ({

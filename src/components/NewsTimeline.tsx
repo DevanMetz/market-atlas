@@ -216,7 +216,8 @@ export function NewsTimeline({
         </div>
         <span>
           {datedCount} dated headlines · {timeline.length} observed{' '}
-          {interval === 'hour' ? 'hours' : 'days'}
+          {interval === 'hour' ? 'hour' : 'day'}
+          {timeline.length === 1 ? '' : 's'}
         </span>
       </div>
       {chart === 'topics' && (
@@ -440,7 +441,8 @@ export function NewsTimeline({
         onToggle={(event) => setShowData(event.currentTarget.open)}
       >
         <summary>
-          View chart data · {timeline.length} observed intervals
+          View chart data · {timeline.length} observed interval
+          {timeline.length === 1 ? '' : 's'}
         </summary>
         {showData && (
           <>
