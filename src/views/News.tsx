@@ -28,6 +28,11 @@ import { useQueryChoice, useQuerySetting } from '../lib/viewSettings'
 import { Empty, Panel, Stat } from '../components/UI'
 import { AsyncContent } from '../components/AsyncContent'
 import { NewsCompanies } from '../components/NewsCompanies'
+import { NewsSearch } from '../components/NewsSearch'
+import {
+  compileHeadlineSearch,
+  headlineSearchDocument,
+} from '../lib/newsSearch'
 import { parseNewsCompanies, stockResearchHref } from '../lib/newsCompanies'
 
 const NewsTimeline = lazy(() =>
@@ -80,7 +85,8 @@ export function NewsView({
   )
   const sourceIds = useMemo(() => [...new Set(feedList.split(','))], [feedList])
   const news = useNews(sourceIds)
-  const [query, setQuery] = useQuerySetting('q', '', (v) => v.length <= 120)
+  const [query, setQuery] = useQuerySetting('q', '', () => true)
+  const search = useMemo(() => compileHeadlineSearch(query), [query])
   const [companyList, setCompanyList] = useQuerySetting(
     'newsCompanies',
     '',
@@ -152,8 +158,13 @@ export function NewsView({
     [sourceIds, news.feeds],
   )
   const headlines = useMemo(() => analyzeHeadlines(feeds), [feeds])
+  const searchIndex = useMemo(
+    () =>
+      new Map(headlines.map((item) => [item, headlineSearchDocument(item)])),
+    [headlines],
+  )
   const filtered = useMemo(() => {
-    const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean)
+    if (search.error) return []
     const since = Date.now() - Number(days) * 86400000
     return headlines
       .filter((item) => {
@@ -174,9 +185,7 @@ export function NewsView({
           !item.copies.some((copy) => copy.sourceId === source)
         )
           return false
-        const text =
-          `${item.title} ${item.tickers.join(' ')} ${item.topics.join(' ')} ${item.copies.map((copy) => NEWS_SOURCE_MAP.get(copy.sourceId)?.name).join(' ')}`.toLowerCase()
-        return terms.every((term) => text.includes(term))
+        return search.matches(searchIndex.get(item)!)
       })
       .sort((a, b) =>
         sort === 'strongest'
@@ -187,7 +196,17 @@ export function NewsView({
             ? (a.publishedAt ?? '9999').localeCompare(b.publishedAt ?? '9999')
             : (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''),
       )
-  }, [headlines, query, days, tone, topic, source, sort, companies])
+  }, [
+    headlines,
+    search,
+    searchIndex,
+    days,
+    tone,
+    topic,
+    source,
+    sort,
+    companies,
+  ])
   const summary = useMemo(() => summarizeHeadlines(filtered), [filtered])
   const topics = useMemo(
     () =>
@@ -244,7 +263,8 @@ export function NewsView({
     Math.max(0, Math.ceil(directory.length / 24) - 1),
   )
   const sample = scoreHeadline(example)
-  const exportHeadlines = () =>
+  const exportHeadlines = () => {
+    const exportedAt = new Date().toISOString()
     downloadCSV(
       'market-atlas-news-headlines.csv',
       [
@@ -261,6 +281,9 @@ export function NewsView({
         'Grouped copies',
         'Feed retrieved at',
         'Feed status',
+        'Search query',
+        'Research URL',
+        'Exported at (UTC)',
       ],
       filtered.map((item) => [
         item.title,
@@ -282,8 +305,12 @@ export function NewsView({
         item.copies.length,
         news.feeds[item.sourceId]?.fetchedAt,
         news.feeds[item.sourceId]?.stale ? 'Stale cache' : 'Retrieved',
+        query,
+        window.location.href,
+        exportedAt,
       ]),
     )
+  }
 
   return (
     <div className="news-workspace">
@@ -357,29 +384,21 @@ export function NewsView({
       {pane !== 'sources' && (
         <>
           <div className="news-filters">
-            <label className="news-search">
-              <Search size={17} aria-hidden="true" />
-              <input
-                aria-label="Search news headlines"
-                placeholder="Search titles, companies or tickers…"
-                maxLength={120}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </label>
-            <label>
-              Published
-              <select
-                aria-label="News publication window"
-                value={days}
-                onChange={(e) => setDays(e.target.value)}
-              >
-                <option value="1">Last 24 hours</option>
-                <option value="7">Last 7 days</option>
-                <option value="30">Last 30 days</option>
-                <option value="all">All retrieved headlines</option>
-              </select>
-            </label>
+            <NewsSearch query={query} onChange={setQuery} error={search.error}>
+              <label>
+                Published
+                <select
+                  aria-label="News publication window"
+                  value={days}
+                  onChange={(e) => setDays(e.target.value)}
+                >
+                  <option value="1">Last 24 hours</option>
+                  <option value="7">Last 7 days</option>
+                  <option value="30">Last 30 days</option>
+                  <option value="all">All retrieved headlines</option>
+                </select>
+              </label>
+            </NewsSearch>
             <details className="news-advanced">
               <summary>
                 More filters
@@ -456,7 +475,7 @@ export function NewsView({
             watchlist={watchlist}
             notify={notify}
           />
-          {pane === 'headlines' && (
+          {pane === 'headlines' && !search.error && (
             <div className="news-compact-summary">
               <span>
                 <strong>{summary.total}</strong> matching headlines
@@ -469,7 +488,7 @@ export function NewsView({
               </button>
             </div>
           )}
-          {pane === 'sentiment' && (
+          {pane === 'sentiment' && !search.error && (
             <div className="stats-row news-stats">
               <Stat
                 label="Matching headlines"
@@ -497,7 +516,7 @@ export function NewsView({
               />
             </div>
           )}
-          {pane === 'sentiment' && tickerCounts.length > 0 && (
+          {pane === 'sentiment' && !search.error && tickerCounts.length > 0 && (
             <div className="news-mentions">
               <span>Company mentions</span>
               {tickerCounts.map(([ticker, count]) => (
@@ -508,7 +527,7 @@ export function NewsView({
               ))}
             </div>
           )}
-          {pane === 'sentiment' && (
+          {pane === 'sentiment' && !search.error && (
             <p className="news-sample-note">
               All charts and counts follow these filters. Headlines are a
               limited, changing feed snapshot. Undated items appear only under
@@ -517,7 +536,7 @@ export function NewsView({
           )}
         </>
       )}
-      {pane === 'headlines' && (
+      {pane === 'headlines' && !search.error && (
         <Panel
           title="Across the wire"
           action={
@@ -678,7 +697,7 @@ export function NewsView({
           </div>
         </Panel>
       )}
-      {pane === 'sentiment' && (
+      {pane === 'sentiment' && !search.error && (
         <>
           <AsyncContent label="Sentiment chart">
             <NewsTimeline items={filtered} days={days} feeds={feeds} />

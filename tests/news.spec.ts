@@ -190,6 +190,123 @@ test('sentiment charts, transparent sandbox and exports follow the sample', asyn
   ).toEqual([])
 })
 
+test('advanced searches share their exact query and filter headline and sentiment exports', async ({
+  page,
+}) => {
+  await page.goto('/?view=news&feeds=bbc,cnbc')
+  const input = page.getByLabel('Search news headlines')
+  await expect(page.locator('.headline-card')).toHaveCount(5)
+  await input.fill('"profit warning"')
+  await expect(page.locator('.headline-card')).toHaveCount(1)
+  await expect(page.locator('.headline-card')).toContainText('Banks plunge')
+  await input.fill('ticker:NVDA OR ticker:AAPL')
+  await expect(page.locator('.headline-card')).toHaveCount(2)
+  await input.fill(
+    '(ticker:NVDA OR ticker:AAPL) earnings -title:growth source:CNBC',
+  )
+  await expect(page.locator('.headline-card')).toHaveCount(1)
+  await expect(page.locator('.headline-card')).toContainText('Nvidia')
+  // CNBC is retained in the grouped publishers even though BBC supplies the displayed copy.
+  await expect(page.locator('.headline-meta')).toContainText('BBC')
+  const query = await input.inputValue()
+  await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(query)
+  await page.reload()
+  await expect(input).toHaveValue(query)
+  await expect(page.locator('.headline-card')).toHaveCount(1)
+  const downloadEvent = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export headlines', exact: true })
+    .click()
+  const csv = await readFile((await (await downloadEvent).path())!, 'utf8')
+  expect(csv).toContain('Search query')
+  expect(csv).toContain(query)
+  expect(csv).toContain('Research URL')
+  expect(csv.trim().split(/\r?\n/)).toHaveLength(2)
+  expect(csv).not.toContain('Apple posts')
+  await page.getByRole('button', { name: 'Sentiment lab', exact: true }).click()
+  await expect(page.locator('.news-chart-controls')).toContainText(
+    '1 dated headlines',
+  )
+  const sentimentDownload = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export sentiment', exact: true })
+    .click()
+  const sentimentCsv = await readFile(
+    (await (await sentimentDownload).path())!,
+    'utf8',
+  )
+  expect(sentimentCsv).toContain('q=%28ticker%3ANVDA')
+  expect(sentimentCsv.trim().split(/\r?\n/)).toHaveLength(2)
+})
+
+test('invalid searches explain corrections and never display an unfiltered chart or export', async ({
+  page,
+}) => {
+  await page.goto('/?view=news&feeds=bbc,cnbc')
+  const input = page.getByLabel('Search news headlines')
+  await input.fill('earnings OR')
+  await expect(input).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByRole('alert')).toContainText('after the operator')
+  await expect(page.locator('.headline-card')).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'Export headlines', exact: true }),
+  ).toHaveCount(0)
+  await page.getByRole('button', { name: 'Sentiment lab', exact: true }).click()
+  await expect(page.locator('.news-timeline-panel')).toHaveCount(0)
+  await expect(page.locator('.news-stats')).toHaveCount(0)
+  await input.fill('earnings OR "profit warning"')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(page.locator('.news-chart-controls')).toContainText(
+    '3 dated headlines',
+  )
+  await input.fill('source:')
+  await page.locator('.news-query-help details summary').click()
+  await page.screenshot({ path: 'test-results/news-search-validation.png' })
+  await page
+    .getByRole('button', { name: 'Clear headline search', exact: true })
+    .click()
+  await expect(input).toBeFocused()
+  await expect(page.locator('.news-chart-controls')).toContainText(
+    '5 dated headlines',
+  )
+  await page.goto('/?view=news&feeds=bbc&q=' + 'a'.repeat(401))
+  await expect(page.getByRole('alert')).toContainText('400 characters')
+  await expect(page.locator('.headline-card')).toHaveCount(0)
+})
+
+test('search examples are keyboard accessible and fit mobile screens', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/?view=news&feeds=bbc,cnbc')
+  await page.locator('.news-query-help details summary').click()
+  const example = page.getByRole('button', {
+    name: 'Try search: Company comparison',
+    exact: true,
+  })
+  await example.focus()
+  await page.keyboard.press('Enter')
+  const input = page.getByLabel('Search news headlines')
+  await expect(input).toHaveValue('(ticker:NVDA OR ticker:AAPL) earnings')
+  await expect(input).toBeFocused()
+  await expect(page.locator('.headline-card')).toHaveCount(2)
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(390)
+  await page
+    .locator('.news-filters')
+    .screenshot({ path: 'test-results/news-search-mobile.png' })
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa'])
+    .disableRules(['color-contrast'])
+    .analyze()
+  expect(
+    accessibility.violations.filter(
+      (v) => v.impact === 'serious' || v.impact === 'critical',
+    ),
+  ).toEqual([])
+})
+
 test('the large directory searches, separates links from feeds and applies source sets', async ({
   page,
 }) => {

@@ -19,6 +19,19 @@ A public, responsive market-research workspace built with React, TypeScript, Rec
 - **Research windows:** preset horizons or custom start/end dates, preserved in shareable URLs. Historical technical indicators stop at the selected end date; current quote cards remain current.
 - **Saved views:** up to 20 named research views stored on this device. Links preserve chart modes, rolling measures and windows, calendar assets, absolute/excess basis, drawdown filters, correlation universes, stock filters and table sorting. Portfolio settings and watchlists remain separate device settings; neither is included in shared URLs.
 
+### Headline search
+
+Use ordinary words to require every term, double quotes for a contiguous phrase, uppercase `OR` for alternatives, and a leading minus or `NOT` to exclude. Parentheses group alternatives; exclusions and `AND` (including spaces) bind before `OR`. For example:
+
+- `"profit warning"` finds that phrase.
+- `(ticker:NVDA OR ticker:AAPL) earnings -title:layoffs` compares detected company mentions while excluding titles mentioning layoffs.
+- `source:CNBC title:stocks` selects a publisher and searches the displayed title.
+- `topic:Energy -title:oil` selects a topic while excluding a title term.
+
+Search is case-insensitive. Text fields match fragments, and phrases cannot span different fields or publisher names. `source:` matches any publisher name or ID retained in a grouped headline; `title:` uses the displayed title; `topic:` uses the assigned keyword tags. `ticker:` requires an exact detected ticker, accepting a leading dollar sign and BRK.A/BRK.B share-class notation. Company detection remains incomplete. Queries search the retrieved snapshot, not full articles or an archive, and intersect the other news filters.
+
+Queries support up to 400 characters, 80 terms/operators and 16 nested group or exclusion levels. Invalid syntax shows a correction message and hides results, charts and exports until corrected. The UI provides keyboard-accessible examples and a clear-search action. The exact query persists in shared links and saved views; headline CSVs include it, the research URL and the export timestamp. Sentiment exports follow the same filtered sample and include the research URL. Search documents are indexed when headlines change and queries compile once per edit; no regular expression or executable code is built from user input.
+
 ## Develop
 
 Requires Node.js 22 or newer and npm.
