@@ -35,6 +35,13 @@ import {
 } from '../lib/newsSearch'
 import { parseNewsCompanies } from '../lib/newsCompanies'
 import {
+  changeNewsFeedSelection,
+  connectedNewsSource,
+  DIRECTORY_SELECTIONS,
+  DIRECTORY_SORTS,
+  findNewsSources,
+} from '../lib/newsDirectory'
+import {
   NewsHeadline,
   SentimentBadge,
   headlineDate,
@@ -129,6 +136,16 @@ export function NewsView({
     'all',
   )
   const [draftFeeds, setDraftFeeds] = useState(sourceIds)
+  const [directorySort, setDirectorySort] = useQueryChoice(
+    'directorySort',
+    DIRECTORY_SORTS,
+    'relevance',
+  )
+  const [directorySelection, setDirectorySelection] = useQueryChoice(
+    'directorySelection',
+    DIRECTORY_SELECTIONS,
+    'all',
+  )
   const [directoryPage, setDirectoryPage] = useState(0)
   const [example, setExample] = useState(
     'Stocks rally as earnings beat estimates, but banks warn of credit losses',
@@ -140,7 +157,14 @@ export function NewsView({
   )
   useEffect(
     () => setDirectoryPage(0),
-    [directoryQuery, category, region, availability],
+    [
+      directoryQuery,
+      category,
+      region,
+      availability,
+      directorySort,
+      directorySelection,
+    ],
   )
   const feeds = useMemo(
     () =>
@@ -234,16 +258,35 @@ export function NewsView({
     )
     return [...counts].sort((a, b) => b[1] - a[1]).slice(0, 12)
   }, [filtered])
-  const directory = NEWS_SOURCES.filter(
-    (s) =>
-      `${s.name} ${s.category} ${s.region}`
-        .toLowerCase()
-        .includes(directoryQuery.toLowerCase()) &&
-      (category === 'all' || s.category === category) &&
-      (region === 'all' || s.region === region) &&
-      (availability === 'all' ||
-        (availability === 'feed' ? s.feedEnabled : !s.feedEnabled)),
+  const directory = useMemo(
+    () =>
+      findNewsSources(NEWS_SOURCES, {
+        query: directoryQuery,
+        category,
+        region,
+        availability,
+        selection: directorySelection,
+        sort: directorySort,
+        selected: draftFeeds,
+      }),
+    [
+      directoryQuery,
+      category,
+      region,
+      availability,
+      directorySelection,
+      directorySort,
+      draftFeeds,
+    ],
   )
+  const matchingFeeds = directory.filter(connectedNewsSource)
+  const matchingSelected = matchingFeeds.filter((entry) =>
+    draftFeeds.includes(entry.id),
+  ).length
+  const pendingAdded = draftFeeds.filter((id) => !sourceIds.includes(id)).length
+  const pendingRemoved = sourceIds.filter(
+    (id) => !draftFeeds.includes(id),
+  ).length
   const currentPage = Math.min(
     page,
     Math.max(0, Math.ceil(filtered.length / 30) - 1),
@@ -721,7 +764,9 @@ export function NewsView({
           action={
             <button
               className="button"
-              onClick={() =>
+              disabled={!directory.length}
+              onClick={() => {
+                const exportedAt = new Date().toISOString()
                 downloadCSV(
                   'market-atlas-news-sources.csv',
                   [
@@ -734,6 +779,16 @@ export function NewsView({
                     'Feed checked',
                     'Notes',
                     'Reference',
+                    'Selected in pending selection',
+                    'Applied feed',
+                    'Directory search',
+                    'Category filter',
+                    'Region filter',
+                    'Availability filter',
+                    'Selection filter',
+                    'Sort order',
+                    'Research URL',
+                    'Exported at (UTC)',
                   ],
                   directory.map((s) => [
                     s.name,
@@ -741,13 +796,23 @@ export function NewsView({
                     s.category,
                     s.region,
                     s.feed,
-                    s.feedEnabled ? 'Yes' : 'No',
+                    connectedNewsSource(s) ? 'Yes' : 'No',
                     s.checkedAt,
                     s.note,
                     s.reference,
+                    draftFeeds.includes(s.id) ? 'Yes' : 'No',
+                    sourceIds.includes(s.id) ? 'Yes' : 'No',
+                    directoryQuery,
+                    category,
+                    region,
+                    availability,
+                    directorySelection,
+                    directorySort,
+                    window.location.href,
+                    exportedAt,
                   ]),
                 )
-              }
+              }}
             >
               <Download size={14} />
               Export directory
@@ -759,43 +824,123 @@ export function NewsView({
               <Search size={17} aria-hidden="true" />
               <input
                 aria-label="Search news sources"
-                placeholder="Search the entire source directory…"
+                aria-describedby="source-directory-help"
+                placeholder="Search publishers, regions, websites…"
                 value={directoryQuery}
                 maxLength={100}
                 onChange={(e) => setDirectoryQuery(e.target.value)}
               />
             </label>
-            <select
-              aria-label="Source category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+            <label className="source-filter">
+              <span>Category</span>
+              <select
+                aria-label="Source category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              >
+                <option value="all">All categories</option>
+                {NEWS_CATEGORIES.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            </label>
+            <label className="source-filter">
+              <span>Region</span>
+              <select
+                aria-label="Source region"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+              >
+                <option value="all">All regions</option>
+                {NEWS_REGIONS.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            </label>
+            <label className="source-filter">
+              <span>Availability</span>
+              <select
+                aria-label="Source feed availability"
+                value={availability}
+                onChange={(e) => setAvailability(e.target.value)}
+              >
+                <option value="all">All sources</option>
+                <option value="feed">Connected feeds</option>
+                <option value="website">Website links</option>
+              </select>
+            </label>
+            <label className="source-filter">
+              <span>Selection</span>
+              <select
+                aria-label="Source selection filter"
+                value={directorySelection}
+                onChange={(e) => setDirectorySelection(e.target.value)}
+              >
+                <option value="all">All listings</option>
+                <option value="selected">Selected feeds</option>
+                <option value="unselected">Unselected feeds</option>
+              </select>
+            </label>
+            <label className="source-filter">
+              <span>Sort</span>
+              <select
+                aria-label="Source directory sort"
+                value={directorySort}
+                onChange={(e) => setDirectorySort(e.target.value)}
+              >
+                <option value="relevance">Most relevant</option>
+                <option value="name">Publisher A–Z</option>
+                <option value="region">Region</option>
+                <option value="selected">Selected first</option>
+              </select>
+            </label>
+            <button
+              className="button"
+              onClick={() => {
+                setDirectoryQuery('')
+                setCategory('all')
+                setRegion('all')
+                setAvailability('all')
+                setDirectorySelection('all')
+                setDirectorySort('relevance')
+              }}
             >
-              <option value="all">All categories</option>
-              {NEWS_CATEGORIES.map((v) => (
-                <option key={v}>{v}</option>
-              ))}
-            </select>
-            <select
-              aria-label="Source region"
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-            >
-              <option value="all">All regions</option>
-              {NEWS_REGIONS.map((v) => (
-                <option key={v}>{v}</option>
-              ))}
-            </select>
-            <select
-              aria-label="Source feed availability"
-              value={availability}
-              onChange={(e) => setAvailability(e.target.value)}
-            >
-              <option value="all">All sources</option>
-              <option value="feed">Connected feeds</option>
-              <option value="website">Website links</option>
-            </select>
+              Reset directory filters
+            </button>
           </div>
+          <p id="source-directory-help" className="source-directory-help">
+            Every search word must match a publisher name, website, category,
+            region or note. Bulk actions and exports cover all matching pages.
+          </p>
           <div className="source-selection">
+            <div className="source-bulk">
+              <span>
+                {directory.length} matching listings · {matchingFeeds.length}{' '}
+                connected feeds
+              </span>
+              <button
+                className="button"
+                disabled={matchingFeeds.length === matchingSelected}
+                onClick={() =>
+                  setDraftFeeds((prev) =>
+                    changeNewsFeedSelection(prev, directory, true),
+                  )
+                }
+              >
+                Add {matchingFeeds.length - matchingSelected} matching feeds
+              </button>
+              <button
+                className="button"
+                disabled={!matchingSelected}
+                onClick={() =>
+                  setDraftFeeds((prev) =>
+                    changeNewsFeedSelection(prev, directory, false),
+                  )
+                }
+              >
+                Remove {matchingSelected} matching feeds
+              </button>
+            </div>
             <div className="source-presets">
               <span>Feed sets</span>
               <button onClick={() => setDraftFeeds(DEFAULT_NEWS_SOURCES)}>
@@ -841,27 +986,44 @@ export function NewsView({
               </button>
               <button onClick={() => setDraftFeeds([])}>Clear selection</button>
             </div>
-            <button
-              className="button primary"
-              disabled={!draftFeeds.length}
-              onClick={() => {
-                setFeedList(draftFeeds.join(','))
-                setSource('all')
-                setPane('headlines')
-                notify(
-                  `${draftFeeds.length} news sources selected. Feeds load in small batches.`,
-                )
-              }}
-            >
-              Apply {draftFeeds.length} sources
-            </button>
+            <div className="source-selection-actions">
+              <p className="source-pending" role="status" aria-live="polite">
+                <strong>{draftFeeds.length} feeds selected</strong> ·{' '}
+                {pendingAdded || pendingRemoved
+                  ? `${pendingAdded} to add, ${pendingRemoved} to remove`
+                  : 'Selection is applied'}
+              </p>
+              <div>
+                <button
+                  className="button"
+                  disabled={!pendingAdded && !pendingRemoved}
+                  onClick={() => setDraftFeeds(sourceIds)}
+                >
+                  Undo pending changes
+                </button>
+                <button
+                  className="button primary"
+                  disabled={!draftFeeds.length}
+                  onClick={() => {
+                    setFeedList(draftFeeds.join(','))
+                    setSource('all')
+                    setPane('headlines')
+                    notify(
+                      `${draftFeeds.length} news sources selected. Feeds load in small batches.`,
+                    )
+                  }}
+                >
+                  Apply {draftFeeds.length} sources
+                </button>
+              </div>
+            </div>
           </div>
           <p className="panel-note">
-            Choose feeds, then apply the selection. Website-only entries open
-            the publisher directly; some require subscriptions or a separate
-            syndication arrangement. Official releases and press-release
-            services are labeled separately from journalism. No article bodies
-            are copied.
+            Apply your selection before saving or sharing a view. Website-only
+            entries open the publisher directly; some require subscriptions or a
+            separate syndication arrangement. Official releases and
+            press-release services are labeled separately from journalism. No
+            article bodies are copied.
           </p>
           <div className="source-directory">
             {directory
@@ -888,7 +1050,7 @@ export function NewsView({
                     </div>
                   </div>
                   <div className="source-card-bottom">
-                    {s.feedEnabled ? (
+                    {connectedNewsSource(s) ? (
                       <label>
                         <input
                           type="checkbox"
@@ -927,7 +1089,7 @@ export function NewsView({
           </div>
           {!directory.length && (
             <Empty title="No sources match">
-              Try another publisher, category or region.
+              Try another publisher, category, region or selection filter.
             </Empty>
           )}
           <div className="table-footer">

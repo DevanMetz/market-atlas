@@ -27,6 +27,8 @@ export const VIEW_SETTINGS: Record<View, readonly string[]> = {
     'category',
     'region',
     'availability',
+    'directorySort',
+    'directorySelection',
   ],
   correlations: ['universe'],
   portfolio: [],

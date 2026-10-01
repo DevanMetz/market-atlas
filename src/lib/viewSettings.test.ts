@@ -77,6 +77,25 @@ describe('saved research views', () => {
 })
 
 describe('shareable chart settings', () => {
+  it('preserves directory filters and sorting with the applied feed selection', () => {
+    const result = preserveViewSettings(
+      'news',
+      '?newsTab=sources&directory=us+markets&category=Markets&region=US&availability=feed&directorySelection=unselected&directorySort=name&feeds=bbc,cnbc&pending=techcrunch',
+      new URLSearchParams({ view: 'news', benchmark: 'QQQ' }),
+    )
+    expect(Object.fromEntries(result)).toEqual({
+      view: 'news',
+      benchmark: 'QQQ',
+      newsTab: 'sources',
+      feeds: 'bbc,cnbc',
+      directory: 'us markets',
+      category: 'Markets',
+      region: 'US',
+      availability: 'feed',
+      directorySort: 'name',
+      directorySelection: 'unselected',
+    })
+  })
   it('keeps the active page settings while the global range changes', () => {
     const result = preserveViewSettings(
       'trends',

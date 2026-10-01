@@ -12,12 +12,20 @@ A public, responsive market-research workspace built with React, TypeScript, Rec
 - **Stock screener:** 54 selected U.S. large-cap stocks, sector/technical filters, sortable metrics, individual research and provider-backed symbol search beyond the catalog.
 - **Trend lab:** 20/60/120/252-observation rolling returns, volatility, correlation and beta; monthly absolute/excess return calendars; descriptive seasonal averages; CSV exports.
 - **Risk lab:** drawdown comparisons on shared dates, completed and ongoing recovery episodes, annualized returns, weak daily-return observations, episode filters and CSV exports with source metadata. Open a decline, recovery or ongoing rebound directly as a comparison of your selected assets over its observed dates. The focused asset is preserved in shared URLs.
-- **News & sentiment:** a searchable directory of 132 publishers and institutions with 55 checked RSS/Atom feeds; searchable, deduplicated headlines; topic, publisher, time and sentiment filters; company/ticker mentions; sentiment and volume timelines; publisher comparisons; an inspectable headline-scoring sandbox; headline, sentiment and source-directory CSV exports. Feed selection and filters are shareable and can be saved as named views.
+- **News & sentiment:** a searchable, sortable directory of 132 publishers and institutions with 55 checked RSS/Atom feeds and bulk feed selection; searchable, deduplicated headlines; topic, publisher, time and sentiment filters; company/ticker mentions; sentiment and volume timelines; publisher comparisons; an inspectable headline-scoring sandbox; headline, sentiment and source-directory CSV exports. Applied feed selection and filters are shareable and can be saved as named views.
 - **Correlations:** pairwise daily-return matrices for sectors, global assets and your comparison; click a pair to investigate.
 - **Portfolio lab:** USD-only simulations with custom starting capital, buy and hold or monthly/quarterly/yearly rebalancing, final allocations, additive profit contributions, volatility, maximum drawdown and daily-return distributions. Search for assets beyond the catalog; export simulations and contributions.
 - **Watchlist:** device-local saved tickers, plus CSV exports and documented calculations.
 - **Research windows:** preset horizons or custom start/end dates, preserved in shareable URLs. Historical technical indicators stop at the selected end date; current quote cards remain current.
 - **Saved views:** up to 20 named research views stored on this device. Links preserve chart modes, rolling measures and windows, calendar assets, absolute/excess basis, drawdown filters, correlation universes, stock filters and table sorting. Portfolio settings and watchlists remain separate device settings; neither is included in shared URLs.
+
+### Search and manage news sources
+
+The source directory searches publisher names, short IDs, websites, categories, regions and catalog notes. Every space-separated word must match somewhere in a listing; matching ignores case, accents and extra whitespace. Name matches rank ahead of IDs, websites and metadata. Without a search, the default preserves catalog order. Sort by publisher A–Z, region or selected feeds first, and combine category, region, availability and selected/unselected-feed filters.
+
+**Add matching feeds** and **Remove matching feeds** affect every filtered result across all directory pages while preserving unrelated selections. Website-only and disabled feeds are never added. Selection filters and counts follow your pending selection. Feed sets replace the whole pending selection; **Undo pending changes** restores the applied feeds. The summary shows how many feeds will be added or removed. Pending edits make no additional feed requests; **Apply sources** updates the retrieved headlines and the shareable feed list. Apply before saving or sharing a view, because pending selection edits are temporary.
+
+**Export directory** exports all sorted, matching listings, not just the current page. It includes publisher and feed details, pending/applied selection flags, every directory filter, sort order, research URL and export timestamp. The button is disabled when no listings match. Directory search, filters and sort settings persist in shared links and saved views.
 
 ### Headline search
 

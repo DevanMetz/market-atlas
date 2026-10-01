@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { readFile } from 'node:fs/promises'
+import { FEED_SOURCES, NEWS_SOURCES } from '../src/lib/newsSources'
 
 // Synthetic headlines exist only in this browser test fixture; never in production.
 test.beforeEach(async ({ page }) => {
@@ -350,6 +351,299 @@ test('the large directory searches, separates links from feeds and applies sourc
   ).toHaveAttribute('aria-pressed', 'true')
   await expect(page).toHaveURL(/feeds=techcrunch/)
   await expect(page.locator('.headline-card')).toHaveCount(5)
+})
+
+test('directory bulk edits cover every matching page, preserve other feeds and wait for Apply', async ({
+  page,
+}) => {
+  const requests: string[] = []
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/news')
+      requests.push(request.url())
+  })
+  await page.goto('/?view=news&newsTab=sources&feeds=bbc,cnbc')
+  await expect(page.locator('.news-feed-status summary')).toContainText(
+    '2/2 selected feeds retrieved',
+  )
+  await expect(
+    page.getByRole('button', { name: 'Undo pending changes' }),
+  ).toBeDisabled()
+  await page.getByLabel('Source category').selectOption('Technology')
+  await page.getByLabel('Source feed availability').selectOption('feed')
+  const technology = FEED_SOURCES.filter(
+    (source) => source.category === 'Technology',
+  ).length
+  await page
+    .getByRole('button', {
+      name: `Add ${technology} matching feeds`,
+      exact: true,
+    })
+    .click()
+  await expect(page.locator('.source-pending')).toContainText(
+    `${technology + 2} feeds selected`,
+  )
+  await page.getByLabel('Source selection filter').selectOption('selected')
+  await page
+    .getByRole('button', {
+      name: `Remove ${technology} matching feeds`,
+      exact: true,
+    })
+    .click()
+  await expect(page.locator('.source-pending')).toContainText(
+    '2 feeds selected · Selection is applied',
+  )
+  expect(requests).toHaveLength(1)
+  await page
+    .getByRole('button', { name: 'Reset directory filters', exact: true })
+    .click()
+  await page.getByLabel('Source feed availability').selectOption('feed')
+  await expect(page.locator('.source-card')).toHaveCount(24)
+  const additional = FEED_SOURCES.length - 2
+  await page
+    .getByRole('button', {
+      name: `Add ${additional} matching feeds`,
+      exact: true,
+    })
+    .click()
+  await expect(page.locator('.source-pending')).toContainText(
+    `${additional} to add, 0 to remove`,
+  )
+  expect(new URL(page.url()).searchParams.get('feeds')).toBe('bbc,cnbc')
+  await page
+    .getByRole('button', { name: 'Next source directory page', exact: true })
+    .click()
+  await expect(page.locator('.source-card input:checked')).toHaveCount(24)
+  await page
+    .getByRole('button', { name: 'Next source directory page', exact: true })
+    .click()
+  await expect(page.locator('.source-card input:checked')).toHaveCount(
+    FEED_SOURCES.length - 48,
+  )
+  await page
+    .getByRole('button', {
+      name: `Remove ${FEED_SOURCES.length} matching feeds`,
+      exact: true,
+    })
+    .click()
+  await expect(page.locator('.source-pending')).toContainText(
+    '0 feeds selected · 0 to add, 2 to remove',
+  )
+  await expect(
+    page.getByRole('button', { name: 'Apply 0 sources', exact: true }),
+  ).toBeDisabled()
+  await page
+    .getByRole('button', { name: 'Undo pending changes', exact: true })
+    .click()
+  await expect(page.locator('.source-pending')).toContainText(
+    '2 feeds selected · Selection is applied',
+  )
+  expect(requests).toHaveLength(1)
+  await page
+    .getByRole('button', {
+      name: `Add ${additional} matching feeds`,
+      exact: true,
+    })
+    .click()
+  await page
+    .getByRole('button', {
+      name: `Apply ${FEED_SOURCES.length} sources`,
+      exact: true,
+    })
+    .click()
+  await expect(page.locator('.news-feed-status summary')).toContainText(
+    `${FEED_SOURCES.length}/${FEED_SOURCES.length} selected feeds retrieved`,
+  )
+  expect(
+    new Set(new URL(page.url()).searchParams.get('feeds')!.split(',')),
+  ).toEqual(new Set(FEED_SOURCES.map((source) => source.id)))
+  await expect(page.locator('.headline-card')).toHaveCount(5)
+  expect(requests.length).toBeGreaterThan(1)
+  for (const request of requests)
+    expect(
+      new URL(request).searchParams.get('sources')!.split(',').length,
+    ).toBeLessThanOrEqual(6)
+})
+
+test('directory multiword search, sorting and intersecting filters distinguish feeds from website links', async ({
+  page,
+}) => {
+  await page.goto('/?view=news&newsTab=sources&feeds=bbc,cnbc')
+  const input = page.getByLabel('Search news sources')
+  await input.fill('  US   MARKETS cnbc  ')
+  await expect(page.locator('.source-card')).toHaveCount(1)
+  await expect(page.locator('.source-card h3')).toContainText('CNBC')
+  await input.fill('Guardian')
+  await page.getByLabel('Source feed availability').selectOption('website')
+  await expect(page.locator('.source-card')).toHaveCount(1)
+  await expect(page.locator('.source-card input')).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'Add 0 matching feeds', exact: true }),
+  ).toBeDisabled()
+  await page.getByLabel('Source feed availability').selectOption('feed')
+  await expect(
+    page.getByRole('heading', { name: 'No sources match', exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Export directory', exact: true }),
+  ).toBeDisabled()
+  await page
+    .getByRole('button', { name: 'Reset directory filters', exact: true })
+    .click()
+  await expect(input).toHaveValue('')
+  await expect(page.getByLabel('Source feed availability')).toHaveValue('all')
+  await page.getByLabel('Source directory sort').selectOption('name')
+  const alphabetical = [...NEWS_SOURCES].sort((a, b) =>
+    a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }),
+  )
+  await expect(page.locator('.source-card h3 a')).toHaveText(
+    alphabetical.slice(0, 24).map((source) => source.name),
+  )
+  await page.getByLabel('Source directory sort').selectOption('region')
+  const regional = [...NEWS_SOURCES].sort(
+    (a, b) =>
+      a.region.localeCompare(b.region, 'en') ||
+      a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }),
+  )
+  await expect(page.locator('.source-card h3 a')).toHaveText(
+    regional.slice(0, 24).map((source) => source.name),
+  )
+  await page.getByLabel('Source directory sort').selectOption('selected')
+  await expect(
+    page.locator('.source-card').nth(0).locator('input'),
+  ).toBeChecked()
+  await expect(
+    page.locator('.source-card').nth(1).locator('input'),
+  ).toBeChecked()
+  await page.getByLabel('Source selection filter').selectOption('selected')
+  await expect(page.locator('.source-card')).toHaveCount(2)
+  await page.getByLabel('Source selection filter').selectOption('unselected')
+  await expect(page.locator('.source-card')).toHaveCount(24)
+  await expect(page.locator('.source-card input:checked')).toHaveCount(0)
+  await expect(page.locator('.source-card input')).toHaveCount(24)
+})
+
+test('directory exports all sorted matches and records pending flags while saved views restore applied feeds', async ({
+  page,
+}) => {
+  await page.goto(
+    '/?view=news&newsTab=sources&feeds=bbc,cnbc&availability=feed&directorySort=name',
+  )
+  await expect(page.locator('.source-card')).toHaveCount(24)
+  const allDownload = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export directory', exact: true })
+    .click()
+  const allCsv = await readFile((await (await allDownload).path())!, 'utf8')
+  expect(allCsv.trim().split(/\r?\n/)).toHaveLength(FEED_SOURCES.length + 1)
+  const alphabetical = [...FEED_SOURCES].sort((a, b) =>
+    a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }),
+  )
+  expect(allCsv.trim().split(/\r?\n/)[1]).toMatch(
+    new RegExp(`^"${alphabetical[0].name}"`),
+  )
+  await page.getByLabel('Search news sources').fill('techcrunch')
+  await page
+    .getByRole('checkbox', { name: 'Select TechCrunch feed', exact: true })
+    .check()
+  await expect(page.locator('.source-pending')).toContainText(
+    '3 feeds selected · 1 to add, 0 to remove',
+  )
+  const selectionDownload = page.waitForEvent('download')
+  await page
+    .getByRole('button', { name: 'Export directory', exact: true })
+    .click()
+  const selectionFile = await selectionDownload
+  expect(selectionFile.suggestedFilename()).toBe(
+    'market-atlas-news-sources.csv',
+  )
+  const csv = await readFile((await selectionFile.path())!, 'utf8')
+  expect(csv).toContain('"Selected in pending selection","Applied feed"')
+  expect(csv.trim().split(/\r?\n/)).toHaveLength(2)
+  expect(csv).toContain(
+    '","Yes","No","techcrunch","all","all","feed","all","name","',
+  )
+  expect(csv).toContain('directorySort=name')
+  expect(csv).toContain('"Research URL","Exported at (UTC)"')
+  await page.getByLabel('Source selection filter').selectOption('unselected')
+  await expect(page.locator('.source-card')).toHaveCount(0)
+  await page.locator('.saved-views summary').click()
+  await page.getByLabel('Saved view name').fill('Unselected technology sources')
+  await page
+    .getByRole('button', { name: 'Save current view', exact: true })
+    .click()
+  await page
+    .getByRole('button', { name: 'Close saved views', exact: true })
+    .click()
+  await page
+    .getByRole('button', { name: 'Reset directory filters', exact: true })
+    .click()
+  await page.locator('.saved-views summary').click()
+  await page
+    .getByRole('link', { name: /Unselected technology sources/ })
+    .click()
+  await expect(page.getByLabel('Search news sources')).toHaveValue('techcrunch')
+  await expect(page.getByLabel('Source selection filter')).toHaveValue(
+    'unselected',
+  )
+  await expect(page.getByLabel('Source directory sort')).toHaveValue('name')
+  await expect(page.getByLabel('Source feed availability')).toHaveValue('feed')
+  await expect(page.locator('.source-card')).toHaveCount(1)
+  await expect(
+    page.getByRole('checkbox', { name: 'Select TechCrunch feed', exact: true }),
+  ).not.toBeChecked()
+  await expect(page.locator('.source-pending')).toContainText(
+    '2 feeds selected · Selection is applied',
+  )
+  expect(new URL(page.url()).searchParams.get('feeds')).toBe('bbc,cnbc')
+})
+
+test('directory controls and selection actions are keyboard accessible and fit mobile', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto(
+    '/?view=news&newsTab=sources&feeds=bbc,cnbc&directorySelection=selected',
+  )
+  await expect(page.locator('.source-card')).toHaveCount(2)
+  await page.getByLabel('Search news sources').focus()
+  await page.keyboard.press('Tab')
+  await expect(page.getByLabel('Source category')).toBeFocused()
+  const remove = page.getByRole('button', {
+    name: 'Remove 2 matching feeds',
+    exact: true,
+  })
+  await remove.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.source-pending')).toContainText(
+    '0 feeds selected',
+  )
+  await page
+    .getByRole('button', { name: 'Undo pending changes', exact: true })
+    .focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.source-card')).toHaveCount(2)
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390)
+  await page
+    .locator('.panel')
+    .filter({
+      has: page.getByRole('heading', {
+        name: 'The source directory',
+        exact: true,
+      }),
+    })
+    .screenshot({ path: 'test-results/news-directory-mobile.png' })
+  const accessibility = await new AxeBuilder({ page })
+    .include('.source-directory-controls')
+    .include('.source-selection')
+    .analyze()
+  expect(
+    accessibility.violations.filter(
+      (violation) =>
+        violation.impact === 'serious' || violation.impact === 'critical',
+    ),
+  ).toEqual([])
 })
 
 test('hourly topic comparisons preserve their settings and export coverage with provenance', async ({
