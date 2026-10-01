@@ -1,7 +1,18 @@
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { FEED_SOURCES, NEWS_SOURCES } from '../src/lib/newsSources'
+import type { NewsSource } from '../src/lib/newsSources'
+
+const NEWS_SOURCES: NewsSource[] = JSON.parse(
+  readFileSync(
+    new URL('../src/lib/news-sources.json', import.meta.url),
+    'utf8',
+  ),
+)
+const FEED_SOURCES = NEWS_SOURCES.filter(
+  (source) => source.feed && source.feedEnabled,
+)
 
 // Synthetic headlines exist only in this browser test fixture; never in production.
 test.beforeEach(async ({ page }) => {
